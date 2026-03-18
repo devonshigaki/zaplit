@@ -1,0 +1,296 @@
+{
+  "name": "Twenty CRM Simple API Examples",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 60
+            }
+          ]
+        }
+      },
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.twenty.com/rest/companies",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\"name\": \"Example Company {{ $now.format('YYYY-MM-DD HH:mm') }}\", \"domainName\": \"example-{{ $now.format('YYYYMMDDHHmm') }}.com\", \"employees\": 50}",
+        "options": {}
+      },
+      "name": "1. Create Company",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        450,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Twenty CRM API"
+        }
+      },
+      "notes": "Creates a new company in Twenty CRM"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.twenty.com/rest/companies",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "name": "2. List Companies",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        450,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Twenty CRM API"
+        }
+      },
+      "notes": "Fetches list of all companies"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.twenty.com/rest/companies?filter={"name":{"like":"%Example%"}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "name": "3. Search Companies",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        450,
+        500
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Twenty CRM API"
+        }
+      },
+      "notes": "Search companies by name using filter"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.twenty.com/rest/people",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\"name\": {\"firstName\": \"John\", \"lastName\": \"Doe\"}, \"email\": \"john.doe@example.com\", \"jobTitle\": \"Sales Manager\"}",
+        "options": {}
+      },
+      "name": "4. Create Person",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        700,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Twenty CRM API"
+        }
+      },
+      "notes": "Creates a contact/person in Twenty CRM"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.twenty.com/rest/people",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "name": "5. List People",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        700,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Twenty CRM API"
+        }
+      },
+      "notes": "Fetches list of all contacts/people"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.twenty.com/rest/notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\"title\": \"Follow-up Required\", \"body\": \"Contacted via website form. Interested in enterprise plan.\"}",
+        "options": {}
+      },
+      "name": "6. Create Note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        950,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Twenty CRM API"
+        }
+      },
+      "notes": "Creates a note in Twenty CRM. Link to person/company by adding personId or companyId to body"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.twenty.com/rest/notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "name": "7. List Notes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        950,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Twenty CRM API"
+        }
+      },
+      "notes": "Fetches all notes"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.twenty.com/rest/people?filter={"email":{"eq":"john.doe@example.com"}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "name": "8. Search Person by Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        700,
+        500
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Twenty CRM API"
+        }
+      },
+      "notes": "Search for person by email address"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.twenty.com/rest/tasks",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\"title\": \"Follow up with new lead\", \"dueAt\": \"{{ $now.plus({days: 1}).toISO() }}\", \"status\": \"TODO\"}",
+        "options": {}
+      },
+      "name": "9. Create Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1200,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Twenty CRM API"
+        }
+      },
+      "notes": "Creates a task with due date tomorrow"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.twenty.com/rest/metadata/objects",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "name": "10. Get Metadata",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1200,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Twenty CRM API"
+        }
+      },
+      "notes": "Get all object schemas and field definitions"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.twenty.com/rest/companies/batch",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\"records\": [{\"name\": \"Batch Company 1\", \"domainName\": \"batch1.com\"}, {\"name\": \"Batch Company 2\", \"domainName\": \"batch2.com\"}]}",
+        "options": {}
+      },
+      "name": "11. Batch Create",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1450,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Twenty CRM API"
+        }
+      },
+      "notes": "Creates multiple companies in one request (max 60)"
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
