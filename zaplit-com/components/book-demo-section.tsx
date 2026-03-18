@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, ArrowLeft, Check, Terminal } from "lucide-react"
+import { Boxes } from "@/components/ui/background-boxes"
 
 const techStacks = {
   CRM: ["Salesforce", "HubSpot", "Pipedrive", "Zoho", "None"],
@@ -67,8 +68,14 @@ export function BookDemoSection() {
   const TOTAL_STEPS = 3
 
   return (
-    <section id="book-demo" className="py-32 border-t border-border bg-card">
-      <div className="max-w-4xl mx-auto px-6">
+    <section id="book-demo" className="py-32 border-t border-border relative overflow-hidden">
+      {/* Background Boxes */}
+      <div className="absolute inset-0 w-full h-full">
+        <Boxes />
+      </div>
+      <div className="absolute inset-0 w-full h-full bg-gradient-to-b from-background via-background/80 to-background z-10 pointer-events-none" />
+      
+      <div className="max-w-4xl mx-auto px-6 relative z-20">
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto mb-16">
           <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-4">Get Started</p>
