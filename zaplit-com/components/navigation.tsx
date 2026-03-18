@@ -27,7 +27,7 @@ export function Navigation() {
 
   const toggleTheme = () => {
     setIsDark(!isDark)
-    document.documentElement.classList.toggle("dark")
+    document.documentElement.classList.toggle("light")
   }
 
   return (
