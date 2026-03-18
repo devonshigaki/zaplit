@@ -46,8 +46,8 @@ export const consultationFormSchema = z
       .min(2, "Name must be at least 2 characters")
       .max(100, "Name is too long")
       .regex(
-        /^[a-zA-Z\s'-]+$/,
-        "Name can only contain letters, spaces, hyphens, and apostrophes"
+        /^[\p{L}\p{M}\s'-.0-9]+$/u,
+        "Name contains invalid characters"
       )
       .transform((val) => val.trim()),
 
@@ -100,8 +100,8 @@ export const consultationFormSchema = z
       .optional()
       .transform((val) => val?.trim() || ""),
 
-    // Honeypot field - must be empty (bot detection)
-    website: z.string().max(0).optional(),
+    // Honeypot field (bot detection) - hidden field, should be empty
+    website: z.string().optional(),
   })
   .strict();
 
@@ -132,8 +132,8 @@ export const contactFormSchema = z
       .max(5000, "Message is too long (max 5000 characters)")
       .transform((val) => val.trim()),
 
-    // Honeypot field
-    website: z.string().max(0).optional(),
+    // Honeypot field (bot detection) - hidden field, should be empty
+    website: z.string().optional(),
   })
   .strict();
 
@@ -146,8 +146,8 @@ export const newsletterFormSchema = z
       .toLowerCase()
       .transform((val) => val.trim()),
 
-    // Honeypot field
-    website: z.string().max(0).optional(),
+    // Honeypot field (bot detection) - hidden field, should be empty
+    website: z.string().optional(),
   })
   .strict();
 

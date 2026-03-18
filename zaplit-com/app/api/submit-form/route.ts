@@ -288,13 +288,13 @@ export async function POST(request: NextRequest) {
       ipHash,
       success: true,
       details: {
-        name: validatedData.name,
+        name: "name" in validatedData ? validatedData.name : undefined,
         company: "company" in validatedData ? validatedData.company : undefined,
       },
     });
 
-    // Extract name parts
-    const nameParts = validatedData.name.split(" ");
+    // Extract name parts (only for forms that have names)
+    const nameParts = "name" in validatedData ? validatedData.name.split(" ") : ["", ""];
     const firstName = nameParts[0] || "";
     const lastName = nameParts.slice(1).join(" ") || "";
 
