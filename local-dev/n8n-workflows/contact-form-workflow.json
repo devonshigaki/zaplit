@@ -38,8 +38,36 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [650, 200]
+    }
+  ],
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Form Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
-    {
-      "parameters": {
-        "recipientEmail": "={{ $json.contact.email }}",
-        "subject": "="Zaplit - We received your message",\n        "text": "="Hi {{ $json.contact.name }},\\n\\nThank you for reaching out. We've received your message and will get back to you within 24 hours.\\n\\nYour message:\\n{{ $json.contact.message }}\\n\\nBest regards,\\nThe Zaplit Team",\n        "html": "="<h1>Thank you, {{ $json.contact.name }}!</h1><p>We've received your message and will get back to you within 24 hours.</p><hr><p><strong>Your message:</strong></p><p>{{ $json.contact.message }}</p><p>Best regards,<br>The Zaplit Team</p>"\n      },\n      "id": "send-confirmation-email",\n      "name": "Send Confirmation Email",\n      "type": "n8n-nodes-base.emailSend",\n      "typeVersion": 2,\n      "position": [850, 200],\n      "notes": "Configure SMTP settings in credentials"\n    },\n    {\n      "parameters": {\n        "chatId": "",\n        "text": "="📧 New Contact Form\\n\\nFrom: {{ $json.contact.name }}\\nEmail: {{ $json.contact.email }}\\nCompany: {{ $json.contact.company }}\\n\\nMessage:\\n{{ $json.contact.message }}"\n      },\n      "id": "notify-slack",\n      "name": "Notify Slack",\n      "type": "n8n-nodes-base.slack",\n      "typeVersion": 2,\n      "position": [850, 400],\n      "notes": "Configure Slack credentials for notifications"\n    },\n    {\n      "parameters": {\n        "operation": "append",\n        "documentId": {},\n        "sheetName": "Contact Submissions",\n        "columns": {\n          "mapping": [\n            {\n              "column": "Timestamp",\n              "value": "={{ $json.metadata.submittedAt }}"\n            },\n            {\n              "column": "Name",\n              "value": "={{ $json.contact.name }}"\n            },\n            {\n              "column": "Email",\n              "value": "={{ $json.contact.email }}"\n            },\n            {\n              "column": "Company",\n              "value": "={{ $json.contact.company }}"\n            },\n            {\n              "column": "Message",\n              "value": "={{ $json.contact.message }}"\n            }\n          ]\n        }\n      },\n      "id": "save-to-sheets",\n      "name": "Save to Google Sheets",\n      "type": "n8n-nodes-base.googleSheets",\n      "typeVersion": 4,\n      "position": [1050, 300],\n      "notes": "Configure Google Sheets credentials"\n    }\n  ],\n  "pinData": {},\n  "settings": {\n    "executionOrder": "v1"\n  },\n  "staticData": null,\n  "tags": [\n    {\n      "name": "Zaplit",\n      "id": "zaplit-tag-contact",\n      "createdAt": "2026-03-18T00:00:00.000Z",\n      "updatedAt": "2026-03-18T00:00:00.000Z"\n    }\n  ],\n  "connections": {\n    "Webhook": {\n      "main": [\n        [\n          {\n            "node": "Process Form Data",\n            "type": "main",\n            "index": 0\n          }\n        ]\n      ]\n    },\n    "Process Form Data": {\n      "main": [\n        [\n          {\n            "node": "Respond to Webhook",\n            "type": "main",\n            "index": 0\n          },\n          {\n            "node": "Send Confirmation Email",\n            "type": "main",\n            "index": 0\n          },\n          {\n            "node": "Notify Slack",\n            "type": "main",\n            "index": 0\n          },\n          {\n            "node": "Save to Google Sheets",\n            "type": "main",\n            "index": 0\n          }\n        ]\n      ]\n    }\n  }\n}
+    "Process Form Data": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
