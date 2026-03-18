@@ -1,0 +1,515 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e5]:
+        - link "zaplit" [ref=e6] [cursor=pointer]:
+          - /url: "#"
+          - img [ref=e8]
+          - generic [ref=e10]: zaplit
+        - generic [ref=e17]:
+          - button "Toggle theme" [ref=e18]:
+            - img [ref=e19]
+          - button "Toggle menu" [ref=e757]:
+            - img [ref=e758]
+    - generic [ref=e31]:
+      - generic [ref=e34]: Boutique agent builds
+      - heading "Hire a Digital Team, Not Software" [level=1] [ref=e35]
+      - paragraph [ref=e36]: Pre-built AI agent teams with white-glove deployment. They can't delete your database or send unauthorized emails. Ever.
+      - generic [ref=e37]:
+        - link "Configure Your Team" [ref=e38] [cursor=pointer]:
+          - /url: "#plans"
+          - text: Configure Your Team
+          - img
+        - link "Calculate Savings" [ref=e39] [cursor=pointer]:
+          - /url: "#calculator"
+      - generic [ref=e40]:
+        - generic [ref=e41]:
+          - img [ref=e42]
+          - generic [ref=e44]: SOC2 Ready
+        - generic [ref=e45]:
+          - img [ref=e46]
+          - generic [ref=e49]: GDPR Compliant
+        - generic [ref=e50]:
+          - img [ref=e51]
+          - generic [ref=e55]: Open Source
+    - generic [ref=e119]:
+      - generic [ref=e120]:
+        - paragraph [ref=e121]: Agent Isolation
+        - heading "Security by design, not afterthought" [level=2] [ref=e122]
+        - paragraph [ref=e123]: Every agent runs in an isolated container with strict role-based access control. They cannot exceed their boundaries—even if they try.
+      - generic [ref=e124]:
+        - generic [ref=e125]:
+          - img [ref=e127]
+          - generic [ref=e131]:
+            - heading "Database Protection" [level=3] [ref=e132]
+            - paragraph [ref=e133]: Agents operate in sandboxed containers with strict RBAC. Read-only access prevents accidental deletions or modifications.
+          - generic [ref=e134]:
+            - generic [ref=e135]:
+              - img [ref=e136]
+              - generic [ref=e140]: Cannot execute DROP commands
+            - generic [ref=e141]:
+              - img [ref=e142]
+              - generic [ref=e146]: Cannot delete production records
+            - generic [ref=e147]:
+              - img [ref=e148]
+              - generic [ref=e151]: Query market analysis data
+        - generic [ref=e152]:
+          - img [ref=e154]
+          - generic [ref=e157]:
+            - heading "Communication Guards" [level=3] [ref=e158]
+            - paragraph [ref=e159]: Draft-only mode for emails and messages. Bulk sends require explicit human approval. All outbound communication is logged and auditable.
+          - generic [ref=e160]:
+            - generic [ref=e161]:
+              - img [ref=e162]
+              - generic [ref=e166]: Send to >100 recipients
+            - generic [ref=e167]:
+              - img [ref=e168]
+              - generic [ref=e172]: Access external addresses outside CRM
+            - generic [ref=e173]:
+              - img [ref=e174]
+              - generic [ref=e177]: Draft campaign email
+        - generic [ref=e178]:
+          - img [ref=e180]
+          - generic [ref=e182]:
+            - heading "Instruction Firewall" [level=3] [ref=e183]
+            - paragraph [ref=e184]: Agents cannot instruct employees to perform tasks outside predefined workflows. Prevents social engineering.
+          - generic [ref=e185]:
+            - generic [ref=e186]:
+              - img [ref=e187]
+              - generic [ref=e191]: Request employee credentials
+            - generic [ref=e192]:
+              - img [ref=e193]
+              - generic [ref=e197]: Bypass approval workflows
+            - generic [ref=e198]:
+              - img [ref=e199]
+              - generic [ref=e202]: Escalate within defined rules
+      - generic [ref=e203]:
+        - generic [ref=e204]:
+          - generic [ref=e205]:
+            - paragraph [ref=e206]: Human in the Loop
+            - heading "You approve everything that matters" [level=3] [ref=e207]
+            - paragraph [ref=e208]: Financial transactions above $500, bulk communications, and anomaly-detected actions all require human approval. Emergency kill switches are always within reach.
+          - generic [ref=e209]:
+            - generic [ref=e210]:
+              - img [ref=e211]
+              - paragraph [ref=e213]: Anomaly Detection
+            - generic [ref=e214]:
+              - img [ref=e215]
+              - paragraph [ref=e218]: $500 Threshold
+            - generic [ref=e219]:
+              - img [ref=e220]
+              - paragraph [ref=e222]: Kill Switch
+        - generic [ref=e223]:
+          - generic [ref=e224]:
+            - heading "Approval Queue" [level=4] [ref=e225]
+            - generic [ref=e226]: 3 pending
+          - generic [ref=e227]:
+            - generic [ref=e228]:
+              - generic [ref=e229]:
+                - generic [ref=e230]:
+                  - generic [ref=e231]: APR-001
+                  - generic [ref=e232]: Marketing
+                - paragraph [ref=e233]: Launch email campaign
+                - paragraph [ref=e234]: $2,500 ad spend
+              - generic [ref=e235]:
+                - button "Deny" [ref=e236]
+                - button "Approve" [ref=e237]
+            - generic [ref=e238]:
+              - generic [ref=e239]:
+                - generic [ref=e240]:
+                  - generic [ref=e241]: APR-002
+                  - generic [ref=e242]: Billing
+                - paragraph [ref=e243]: Process refund
+                - paragraph [ref=e244]: $847.00
+              - generic [ref=e245]:
+                - button "Deny" [ref=e246]
+                - button "Approve" [ref=e247]
+            - generic [ref=e248]:
+              - generic [ref=e249]:
+                - generic [ref=e250]:
+                  - generic [ref=e251]: APR-003
+                  - generic [ref=e252]: Lead
+                - paragraph [ref=e253]: Export lead list
+                - paragraph [ref=e254]: 1,240 contacts
+              - generic [ref=e255]: Approved
+    - generic [ref=e257]:
+      - generic [ref=e258]:
+        - paragraph [ref=e259]: The Seven
+        - heading "Digital employees that build reputation" [level=2] [ref=e260]
+        - paragraph [ref=e261]: Seven specialized agents organized into three departments. Each with specific capabilities, strict isolation scopes, and credential-based trust.
+      - generic [ref=e262]:
+        - button "Operations" [ref=e263]
+        - button "Product" [ref=e264]
+        - button "Service" [ref=e265]
+      - paragraph [ref=e266]: Central coordination and workflow management
+      - button "Secretary Orchestrator" [ref=e759]:
+        - generic [ref=e270]:
+          - img [ref=e272]
+          - generic [ref=e277]:
+            - heading "Secretary" [level=3] [ref=e278]
+            - generic [ref=e279]: Orchestrator
+        - img [ref=e288]
+    - generic [ref=e291]:
+      - generic [ref=e292]:
+        - paragraph [ref=e293]: Configuration
+        - heading "Build your digital organization" [level=2] [ref=e294]
+        - paragraph [ref=e295]: Select the departments you need. All configurations include the Secretary orchestrator. Pricing is custom based on your tech stack complexity.
+      - generic [ref=e296]:
+        - generic [ref=e299] [cursor=pointer]:
+          - generic [ref=e300]:
+            - heading "Operations" [level=3] [ref=e301]
+            - paragraph [ref=e302]: Central coordination and workflow automation
+          - generic "Secretary" [ref=e304]:
+            - img [ref=e305]
+          - generic [ref=e309]:
+            - generic [ref=e310]:
+              - img [ref=e311]
+              - generic [ref=e313]: Workflow orchestration
+            - generic [ref=e314]:
+              - img [ref=e315]
+              - generic [ref=e317]: Task delegation
+            - generic [ref=e318]:
+              - img [ref=e319]
+              - generic [ref=e321]: Priority management
+            - generic [ref=e322]:
+              - img [ref=e323]
+              - generic [ref=e325]: Cross-team coordination
+        - generic [ref=e328] [cursor=pointer]:
+          - generic [ref=e329]:
+            - heading "Product" [level=3] [ref=e330]
+            - paragraph [ref=e331]: Research, security, and marketing intelligence
+          - generic [ref=e332]:
+            - generic "Research" [ref=e333]:
+              - img [ref=e334]
+            - generic "Security" [ref=e337]:
+              - img [ref=e338]
+            - generic "Marketing" [ref=e340]:
+              - img [ref=e341]
+          - generic [ref=e344]:
+            - generic [ref=e345]:
+              - img [ref=e346]
+              - generic [ref=e348]: Market intelligence
+            - generic [ref=e349]:
+              - img [ref=e350]
+              - generic [ref=e352]: Threat detection
+            - generic [ref=e353]:
+              - img [ref=e354]
+              - generic [ref=e356]: Content creation
+            - generic [ref=e357]:
+              - img [ref=e358]
+              - generic [ref=e360]: Compliance monitoring
+        - generic [ref=e363] [cursor=pointer]:
+          - generic [ref=e364]:
+            - heading "Service" [level=3] [ref=e365]
+            - paragraph [ref=e366]: Customer-facing operations and revenue
+          - generic [ref=e367]:
+            - generic "Lead" [ref=e368]:
+              - img [ref=e369]
+            - generic "Billing" [ref=e372]:
+              - img [ref=e373]
+            - generic "Support" [ref=e376]:
+              - img [ref=e377]
+          - generic [ref=e379]:
+            - generic [ref=e380]:
+              - img [ref=e381]
+              - generic [ref=e383]: Sales development
+            - generic [ref=e384]:
+              - img [ref=e385]
+              - generic [ref=e387]: Invoice automation
+            - generic [ref=e388]:
+              - img [ref=e389]
+              - generic [ref=e391]: Ticket resolution
+            - generic [ref=e392]:
+              - img [ref=e393]
+              - generic [ref=e395]: CRM management
+      - generic [ref=e397] [cursor=pointer]:
+        - generic [ref=e400]:
+          - heading "Complete Organization" [level=3] [ref=e401]
+          - paragraph [ref=e402]: All 7 agents across all departments
+        - generic [ref=e403]:
+          - generic "Secretary" [ref=e404]:
+            - img [ref=e405]
+          - generic "Research" [ref=e409]:
+            - img [ref=e410]
+          - generic "Security" [ref=e413]:
+            - img [ref=e414]
+          - generic "Marketing" [ref=e416]:
+            - img [ref=e417]
+          - generic "Lead" [ref=e420]:
+            - img [ref=e421]
+          - generic "Billing" [ref=e424]:
+            - img [ref=e425]
+          - generic "Support" [ref=e428]:
+            - img [ref=e429]
+      - generic [ref=e431]:
+        - paragraph [ref=e432]: Select departments to configure your team
+        - button "Book Consultation" [disabled]
+        - paragraph [ref=e433]: Custom pricing based on tech stack assessment
+    - generic [ref=e435]:
+      - generic [ref=e436]:
+        - paragraph [ref=e437]: ROI Calculator
+        - heading "Calculate your savings" [level=2] [ref=e438]
+        - paragraph [ref=e439]: Compare the cost of human employees versus AI agents over time. One-time build cost plus minimal maintenance.
+      - generic [ref=e440]:
+        - generic [ref=e441]:
+          - generic [ref=e442]:
+            - heading "Select Agents" [level=3] [ref=e443]
+            - generic [ref=e444]:
+              - button "Secretary $95,000/yr" [disabled] [ref=e445]:
+                - img [ref=e446]
+                - paragraph [ref=e450]: Secretary
+                - paragraph [ref=e451]: $95,000/yr
+              - button "Research $85,000/yr" [ref=e452]:
+                - img [ref=e453]
+                - paragraph [ref=e456]: Research
+                - paragraph [ref=e457]: $85,000/yr
+              - button "Security $110,000/yr" [ref=e458]:
+                - img [ref=e459]
+                - paragraph [ref=e461]: Security
+                - paragraph [ref=e462]: $110,000/yr
+              - button "Marketing $85,000/yr" [ref=e463]:
+                - img [ref=e464]
+                - paragraph [ref=e467]: Marketing
+                - paragraph [ref=e468]: $85,000/yr
+              - button "Lead $75,000/yr" [ref=e469]:
+                - img [ref=e470]
+                - paragraph [ref=e473]: Lead
+                - paragraph [ref=e474]: $75,000/yr
+              - button "Billing $70,000/yr" [ref=e475]:
+                - img [ref=e476]
+                - paragraph [ref=e479]: Billing
+                - paragraph [ref=e480]: $70,000/yr
+              - button "Support $50,000/yr" [ref=e481]:
+                - img [ref=e482]
+                - paragraph [ref=e484]: Support
+                - paragraph [ref=e485]: $50,000/yr
+            - paragraph [ref=e486]: Secretary is always included as the orchestrator
+          - generic [ref=e487]:
+            - generic [ref=e488]:
+              - heading "Team Size" [level=3] [ref=e489]
+              - generic [ref=e490]: 1x per role
+            - slider [ref=e491] [cursor=pointer]: "1"
+            - generic [ref=e492]:
+              - generic [ref=e493]: "1"
+              - generic [ref=e494]: "10"
+          - generic [ref=e495]:
+            - generic [ref=e496]:
+              - heading "Timeframe" [level=3] [ref=e497]
+              - generic [ref=e498]: 3 years
+            - slider [ref=e499] [cursor=pointer]: "3"
+            - generic [ref=e500]:
+              - generic [ref=e501]: 1 year
+              - generic [ref=e502]: 5 years
+        - generic [ref=e503]:
+          - generic [ref=e504]:
+            - heading "Cost Comparison" [level=3] [ref=e505]
+            - generic [ref=e506]:
+              - generic [ref=e508]:
+                - generic [ref=e509]: Human employees
+                - generic [ref=e510]: $285,000
+              - generic [ref=e514]:
+                - generic [ref=e515]: AI agents
+                - generic [ref=e516]: $19,200
+            - generic [ref=e519]:
+              - generic [ref=e520]:
+                - paragraph [ref=e521]: Build cost (one-time)
+                - paragraph [ref=e522]: $12,000
+              - generic [ref=e523]:
+                - paragraph [ref=e524]: Maintenance (3yr)
+                - paragraph [ref=e525]: $7,200
+          - generic [ref=e526]:
+            - generic [ref=e527]:
+              - paragraph [ref=e528]: Total Savings
+              - paragraph [ref=e529]: $265,800
+              - paragraph [ref=e530]: 93% reduction
+            - generic [ref=e531]:
+              - paragraph [ref=e532]: Payback Period
+              - paragraph [ref=e533]: "2"
+              - paragraph [ref=e534]: months
+          - generic [ref=e535]:
+            - paragraph [ref=e536]: Annual Savings After Payback
+            - paragraph [ref=e537]: $92,600
+            - paragraph [ref=e538]: per year
+    - generic [ref=e540]:
+      - generic [ref=e541]:
+        - paragraph [ref=e542]: Integrations
+        - heading "Connect to everything" [level=2] [ref=e543]
+        - paragraph [ref=e544]: 400+ native integrations. Custom API and webhook flows for anything else. You own the connections—no vendor lock-in.
+      - generic [ref=e545]:
+        - generic [ref=e546]:
+          - img "Salesforce logo" [ref=e548]
+          - paragraph [ref=e549]: Salesforce
+          - paragraph [ref=e550]: CRM
+        - generic [ref=e551]:
+          - img "HubSpot logo" [ref=e553]
+          - paragraph [ref=e554]: HubSpot
+          - paragraph [ref=e555]: CRM
+        - generic [ref=e556]:
+          - img "Slack logo" [ref=e558]
+          - paragraph [ref=e559]: Slack
+          - paragraph [ref=e560]: Communication
+        - generic [ref=e561]:
+          - img "Microsoft Teams logo" [ref=e563]
+          - paragraph [ref=e564]: Microsoft Teams
+          - paragraph [ref=e565]: Communication
+        - generic [ref=e566]:
+          - img "Stripe logo" [ref=e568]
+          - paragraph [ref=e569]: Stripe
+          - paragraph [ref=e570]: Finance
+        - generic [ref=e571]:
+          - img "QuickBooks logo" [ref=e573]
+          - paragraph [ref=e574]: QuickBooks
+          - paragraph [ref=e575]: Finance
+        - generic [ref=e576]:
+          - img "Notion logo" [ref=e578]
+          - paragraph [ref=e579]: Notion
+          - paragraph [ref=e580]: Productivity
+        - generic [ref=e581]:
+          - img "Airtable logo" [ref=e583]
+          - paragraph [ref=e584]: Airtable
+          - paragraph [ref=e585]: Productivity
+        - generic [ref=e586]:
+          - img "Zendesk logo" [ref=e588]
+          - paragraph [ref=e589]: Zendesk
+          - paragraph [ref=e590]: Support
+        - generic [ref=e591]:
+          - img "Intercom logo" [ref=e593]
+          - paragraph [ref=e594]: Intercom
+          - paragraph [ref=e595]: Support
+        - generic [ref=e596]:
+          - img "AWS logo" [ref=e598]
+          - paragraph [ref=e599]: AWS
+          - paragraph [ref=e600]: Infrastructure
+        - generic [ref=e601]:
+          - img "Google Cloud logo" [ref=e603]
+          - paragraph [ref=e604]: Google Cloud
+          - paragraph [ref=e605]: Infrastructure
+      - generic [ref=e606]:
+        - generic [ref=e607]:
+          - paragraph [ref=e608]: 400+
+          - paragraph [ref=e609]: Native Apps
+        - generic [ref=e610]:
+          - paragraph [ref=e611]: 100%
+          - paragraph [ref=e612]: Open Source
+        - generic [ref=e613]:
+          - paragraph [ref=e614]: "0"
+          - paragraph [ref=e615]: Vendor Lock-in
+      - link "View all 400+ integrations" [ref=e617] [cursor=pointer]:
+        - /url: /integrations
+        - text: View all 400+ integrations
+        - generic [ref=e618]: →
+    - generic [ref=e620]:
+      - generic [ref=e621]:
+        - paragraph [ref=e622]: FAQ
+        - heading "Common questions" [level=2] [ref=e623]
+      - generic [ref=e624]:
+        - generic [ref=e625]:
+          - button "How does agent isolation prevent accidents?" [ref=e626]:
+            - generic [ref=e627]: How does agent isolation prevent accidents?
+            - img [ref=e628]
+          - paragraph [ref=e631]: Each agent runs in a sandboxed container with strict Role-Based Access Control (RBAC). They physically cannot execute commands outside their scope—it's not just policy, it's architecture. Database agents have read-only access, communication agents can only draft (not send), and all high-impact actions require human approval.
+        - button "What happens if an agent tries to exceed its boundaries?" [ref=e633]:
+          - generic [ref=e634]: What happens if an agent tries to exceed its boundaries?
+          - img [ref=e635]
+        - button "Can agents instruct employees to do harmful things?" [ref=e638]:
+          - generic [ref=e639]: Can agents instruct employees to do harmful things?
+          - img [ref=e640]
+        - button "How does pricing work compared to traditional software?" [ref=e643]:
+          - generic [ref=e644]: How does pricing work compared to traditional software?
+          - img [ref=e645]
+        - button "What's included in the 90-day handoff period?" [ref=e648]:
+          - generic [ref=e649]: What's included in the 90-day handoff period?
+          - img [ref=e650]
+        - button "Do I own the infrastructure?" [ref=e653]:
+          - generic [ref=e654]: Do I own the infrastructure?
+          - img [ref=e655]
+        - button "What compliance standards do you support?" [ref=e658]:
+          - generic [ref=e659]: What compliance standards do you support?
+          - img [ref=e660]
+        - button "Can I start with one department and add more later?" [ref=e663]:
+          - generic [ref=e664]: Can I start with one department and add more later?
+          - img [ref=e665]
+    - generic [ref=e668]:
+      - generic [ref=e669]:
+        - paragraph [ref=e670]: Get Started
+        - heading "Book a consultation" [level=2] [ref=e671]
+        - paragraph [ref=e672]: Tell us about your stack. We'll match you with the right agent team and walk you through setup.
+      - generic [ref=e673]:
+        - generic [ref=e674]:
+          - generic [ref=e676]: "1"
+          - generic [ref=e680]: "2"
+          - generic [ref=e684]: "3"
+        - generic [ref=e686]:
+          - generic [ref=e687]:
+            - heading "Contact information" [level=3] [ref=e688]
+            - paragraph [ref=e689]: Who should we reach out to?
+          - generic [ref=e690]:
+            - generic [ref=e691]:
+              - generic [ref=e692]: Name
+              - textbox "Your name" [ref=e693]
+            - generic [ref=e694]:
+              - generic [ref=e695]: Role
+              - textbox "CTO, Head of Ops…" [ref=e696]
+            - generic [ref=e697]:
+              - generic [ref=e698]: Company
+              - textbox "Company name" [ref=e699]
+            - generic [ref=e700]:
+              - generic [ref=e701]: Work email
+              - textbox "you@company.com" [ref=e702]
+            - generic [ref=e703]:
+              - generic [ref=e704]: Team size
+              - generic [ref=e705]:
+                - button "1–10" [ref=e706]
+                - button "11–50" [ref=e707]
+                - button "51–200" [ref=e708]
+                - button "200+" [ref=e709]
+        - generic [ref=e710]:
+          - button "Continue" [disabled]:
+            - text: Continue
+            - img
+      - generic [ref=e711]:
+        - generic [ref=e712]:
+          - img [ref=e713]
+          - generic [ref=e715]: No sales pressure
+        - generic [ref=e717]:
+          - img [ref=e718]
+          - generic [ref=e720]: Response within 1 business day
+    - generic [ref=e727]:
+      - generic [ref=e728]:
+        - generic [ref=e729]:
+          - generic [ref=e730]:
+            - img [ref=e732]
+            - generic [ref=e734]: zaplit
+          - paragraph [ref=e735]: Boutique AI agent agency. White-glove deployment of pre-built agent teams. No subscriptions, just results.
+        - generic [ref=e736]:
+          - heading "Product" [level=4] [ref=e737]
+          - generic [ref=e738]:
+            - link "Agents" [ref=e739] [cursor=pointer]:
+              - /url: "#agents"
+            - link "Security" [ref=e740] [cursor=pointer]:
+              - /url: "#security"
+            - link "Plans" [ref=e741] [cursor=pointer]:
+              - /url: "#plans"
+            - link "Calculator" [ref=e742] [cursor=pointer]:
+              - /url: "#calculator"
+        - generic [ref=e743]:
+          - heading "Company" [level=4] [ref=e744]
+          - generic [ref=e745]:
+            - link "About" [ref=e746] [cursor=pointer]:
+              - /url: /about
+            - link "Blog" [ref=e747] [cursor=pointer]:
+              - /url: /blog
+            - link "Careers" [ref=e748] [cursor=pointer]:
+              - /url: /careers
+            - link "Contact" [ref=e749] [cursor=pointer]:
+              - /url: /contact
+      - generic [ref=e750]:
+        - paragraph [ref=e751]: © 2026 Zaplit. All rights reserved.
+        - generic [ref=e752]:
+          - link "Privacy" [ref=e753] [cursor=pointer]:
+            - /url: /privacy
+          - link "Terms" [ref=e754] [cursor=pointer]:
+            - /url: /terms
+          - link "Security" [ref=e755] [cursor=pointer]:
+            - /url: "#security"
+  - alert [ref=e756]

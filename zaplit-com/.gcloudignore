@@ -1,0 +1,18 @@
+# This file specifies files that are *not* uploaded to Google Cloud
+.gcloudignore
+.git
+.gitignore
+node_modules
+*.log
+app/
+components/
+hooks/
+lib/
+styles/
+.next/
+out/
+*.png
+*.jpg
+*.jpeg
+!dist/
+!public/

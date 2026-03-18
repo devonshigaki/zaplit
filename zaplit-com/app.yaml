@@ -1,0 +1,11 @@
+runtime: python311
+
+handlers:
+  - url: /_next/static
+    static_dir: dist/_next/static
+  - url: /(.*\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|json|xml|txt|webmanifest))$
+    static_files: dist/\1
+    upload: dist/.*\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|json|xml|txt|webmanifest)$
+  - url: /.*
+    static_files: dist/index.html
+    upload: dist/index.html
