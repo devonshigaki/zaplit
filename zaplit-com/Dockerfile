@@ -1,7 +1,28 @@
-FROM nginx:alpine
-# Cache bust: 2026-03-18T20:25:00Z-v2
-COPY dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-# Disable nginx caching
-RUN sed -i 's/sendfile on/sendfile off/g' /etc/nginx/nginx.conf
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy project files
+COPY . .
+
+# Build the application
+RUN pnpm build
+
+# Expose the port
 EXPOSE 8080
+
+# Set environment variable for port
+ENV PORT=8080
+ENV NODE_ENV=production
+
+# Start the application
+CMD ["pnpm", "start", "-p", "8080"]

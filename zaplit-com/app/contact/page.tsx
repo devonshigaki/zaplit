@@ -2,16 +2,40 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Terminal, ArrowLeft, Mail, MessageSquare, Building2, Check } from "lucide-react"
+import { Terminal, ArrowLeft, Mail, MessageSquare, Building2, Check, AlertCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useFormSubmission } from "@/lib/form-submission"
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false)
+  const [submissionId, setSubmissionId] = useState<string>()
+  const { submitForm, isSubmitting, error, resetError } = useFormSubmission()
+  
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    company: "",
+    message: "",
+  })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    resetError()
+
+    const result = await submitForm({
+      formType: "contact",
+      data: formData,
+      metadata: {
+        url: typeof window !== "undefined" ? window.location.href : "",
+      },
+    })
+
+    if (result.success) {
+      setSubmissionId(result.id)
+      setSubmitted(true)
+    }
   }
 
   return (
@@ -41,11 +65,11 @@ export default function ContactPage() {
             <div>
               <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-4">Contact</p>
               <h1 className="text-4xl md:text-5xl font-serif italic mb-6 text-balance">
-                Let's talk
+                Let&apos;s talk
               </h1>
               <p className="text-muted-foreground leading-relaxed mb-12">
                 Have questions about our agents? Want to discuss a deployment? 
-                We'd love to hear from you.
+                We&apos;d love to hear from you.
               </p>
 
               <div className="space-y-6">
@@ -89,35 +113,75 @@ export default function ContactPage() {
                     <Check className="w-6 h-6 text-success" />
                   </div>
                   <h3 className="text-xl font-medium mb-2">Message sent</h3>
-                  <p className="text-sm text-muted-foreground">
-                    We'll get back to you within 24 hours.
+                  <p className="text-sm text-muted-foreground mb-4">
+                    We&apos;ll get back to you within 24 hours.
                   </p>
+                  {submissionId && (
+                    <p className="text-xs font-mono text-muted-foreground">
+                      Ref: {submissionId.slice(0, 8)}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+                  
                   <div>
                     <label className="text-sm font-medium mb-2 block">Name</label>
-                    <Input placeholder="Your name" required />
+                    <Input 
+                      placeholder="Your name" 
+                      required 
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      disabled={isSubmitting}
+                    />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">Email</label>
-                    <Input type="email" placeholder="you@company.com" required />
+                    <Input 
+                      type="email" 
+                      placeholder="you@company.com" 
+                      required 
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      disabled={isSubmitting}
+                    />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">Company</label>
-                    <Input placeholder="Your company" />
+                    <Input 
+                      placeholder="Your company" 
+                      value={formData.company}
+                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                      disabled={isSubmitting}
+                    />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">Message</label>
                     <textarea
-                      className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-foreground resize-none"
+                      className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-foreground resize-none disabled:opacity-50"
                       rows={4}
                       placeholder="How can we help?"
                       required
+                      value={formData.message}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                      disabled={isSubmitting}
                     />
                   </div>
-                  <Button type="submit" className="w-full">
-                    Send Message
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      "Send Message"
+                    )}
                   </Button>
                 </form>
               )}

@@ -2,8 +2,10 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, ArrowLeft, Check, Terminal } from "lucide-react"
+import { ArrowRight, ArrowLeft, Check, Terminal, AlertCircle, Loader2 } from "lucide-react"
 import { Boxes } from "@/components/ui/background-boxes"
+import { useFormSubmission } from "@/lib/form-submission"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 const techStacks = {
   CRM: ["Salesforce", "HubSpot", "Pipedrive", "Zoho", "None"],
@@ -30,6 +32,9 @@ const securityLevels = [
 export function BookDemoSection() {
   const [step, setStep] = useState(1)
   const [submitted, setSubmitted] = useState(false)
+  const [submissionId, setSubmissionId] = useState<string>()
+  const { submitForm, isSubmitting, error, resetError } = useFormSubmission()
+  
   const [formData, setFormData] = useState({
     name: "",
     company: "",
@@ -61,8 +66,36 @@ export function BookDemoSection() {
     return true
   }
 
-  const handleSubmit = () => {
-    setSubmitted(true)
+  const handleSubmit = async () => {
+    resetError()
+    
+    const result = await submitForm({
+      formType: "consultation",
+      data: {
+        name: formData.name,
+        company: formData.company,
+        email: formData.email,
+        role: formData.role,
+        teamSize: formData.teamSize,
+        securityLevel: formData.securityLevel,
+        techStack: formData.techStack,
+        compliance: formData.compliance,
+        message: formData.message,
+      },
+      metadata: {
+        url: typeof window !== "undefined" ? window.location.href : "",
+      },
+    })
+
+    if (result.success) {
+      setSubmissionId(result.id)
+      setSubmitted(true)
+    }
+  }
+
+  const handleStepChange = (newStep: number) => {
+    resetError()
+    setStep(newStep)
   }
 
   const TOTAL_STEPS = 3
@@ -83,7 +116,7 @@ export function BookDemoSection() {
             Book a consultation
           </h2>
           <p className="text-lg text-muted-foreground leading-relaxed">
-            Tell us about your stack. We'll match you with the right agent team and walk you through setup.
+            Tell us about your stack. We&apos;ll match you with the right agent team and walk you through setup.
           </p>
         </div>
 
@@ -98,6 +131,11 @@ export function BookDemoSection() {
               We review each submission manually. Expect a response within one business day at{" "}
               <span className="text-foreground font-mono text-sm">{formData.email}</span>.
             </p>
+            {submissionId && (
+              <p className="text-xs font-mono text-muted-foreground mb-6">
+                Reference: {submissionId.slice(0, 8)}
+              </p>
+            )}
             <div className="bg-background border border-border rounded-xl p-6 text-left space-y-3">
               <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-4">Summary</p>
               {[
@@ -116,6 +154,14 @@ export function BookDemoSection() {
           </div>
         ) : (
           <div className="max-w-2xl mx-auto">
+            {/* Error Alert */}
+            {error && (
+              <Alert variant="destructive" className="mb-6">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
             {/* Step indicator */}
             <div className="flex items-center gap-3 mb-10">
               {Array.from({ length: TOTAL_STEPS }).map((_, i) => {
@@ -156,6 +202,7 @@ export function BookDemoSection() {
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:border-foreground focus:outline-none transition-colors text-sm font-mono"
                       placeholder="Your name"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="col-span-2 sm:col-span-1">
@@ -166,6 +213,7 @@ export function BookDemoSection() {
                       onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                       className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:border-foreground focus:outline-none transition-colors text-sm font-mono"
                       placeholder="CTO, Head of Ops…"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="col-span-2">
@@ -176,6 +224,7 @@ export function BookDemoSection() {
                       onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                       className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:border-foreground focus:outline-none transition-colors text-sm font-mono"
                       placeholder="Company name"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="col-span-2">
@@ -186,6 +235,7 @@ export function BookDemoSection() {
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:border-foreground focus:outline-none transition-colors text-sm font-mono"
                       placeholder="you@company.com"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="col-span-2">
@@ -196,11 +246,12 @@ export function BookDemoSection() {
                           key={size}
                           type="button"
                           onClick={() => setFormData({ ...formData, teamSize: size })}
+                          disabled={isSubmitting}
                           className={`px-3 py-2.5 rounded-lg border text-sm font-mono transition-colors ${
                             formData.teamSize === size
                               ? "border-foreground bg-secondary text-foreground"
                               : "border-border text-muted-foreground hover:border-muted-foreground"
-                          }`}
+                          } ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
                         >
                           {size}
                         </button>
@@ -228,11 +279,12 @@ export function BookDemoSection() {
                             key={opt}
                             type="button"
                             onClick={() => updateTechStack(category, formData.techStack[category] === opt ? "" : opt)}
+                            disabled={isSubmitting}
                             className={`px-3 py-1.5 rounded-md border text-xs font-mono transition-colors ${
                               formData.techStack[category] === opt
                                 ? "border-foreground bg-secondary text-foreground"
                                 : "border-border text-muted-foreground hover:border-muted-foreground"
-                            }`}
+                            } ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
                           >
                             {opt}
                           </button>
@@ -251,7 +303,7 @@ export function BookDemoSection() {
             {step === 3 && (
               <div className="space-y-7">
                 <div>
-                  <h3 className="text-xl font-medium mb-1">Security & compliance</h3>
+                  <h3 className="text-xl font-medium mb-1">Security &amp; compliance</h3>
                   <p className="text-sm text-muted-foreground">Helps us configure the right isolation level from day one.</p>
                 </div>
 
@@ -263,11 +315,12 @@ export function BookDemoSection() {
                         key={level.id}
                         type="button"
                         onClick={() => setFormData({ ...formData, securityLevel: level.id })}
+                        disabled={isSubmitting}
                         className={`p-4 rounded-lg border text-left transition-colors ${
                           formData.securityLevel === level.id
                             ? "border-foreground bg-secondary"
                             : "border-border hover:border-muted-foreground"
-                        }`}
+                        } ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
                       >
                         <p className="text-sm font-medium mb-1">{level.label}</p>
                         <p className="text-xs text-muted-foreground leading-snug">{level.description}</p>
@@ -284,11 +337,12 @@ export function BookDemoSection() {
                         key={opt.id}
                         type="button"
                         onClick={() => toggleCompliance(opt.id)}
+                        disabled={isSubmitting}
                         className={`p-4 rounded-lg border text-left flex items-start justify-between gap-2 transition-colors ${
                           formData.compliance.includes(opt.id)
                             ? "border-foreground bg-secondary"
                             : "border-border hover:border-muted-foreground"
-                        }`}
+                        } ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
                       >
                         <div>
                           <p className="text-sm font-medium font-mono">{opt.label}</p>
@@ -308,7 +362,8 @@ export function BookDemoSection() {
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     rows={3}
-                    className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:border-foreground focus:outline-none transition-colors text-sm font-mono resize-none"
+                    disabled={isSubmitting}
+                    className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:border-foreground focus:outline-none transition-colors text-sm font-mono resize-none disabled:opacity-50"
                     placeholder="Special requirements, timeline, current pain points…"
                   />
                 </div>
@@ -320,8 +375,9 @@ export function BookDemoSection() {
               {step > 1 ? (
                 <button
                   type="button"
-                  onClick={() => setStep(step - 1)}
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => handleStepChange(step - 1)}
+                  disabled={isSubmitting}
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   Back
@@ -332,17 +388,26 @@ export function BookDemoSection() {
 
               {step < TOTAL_STEPS ? (
                 <Button
-                  onClick={() => setStep(step + 1)}
-                  disabled={!canProceed()}
+                  onClick={() => handleStepChange(step + 1)}
+                  disabled={!canProceed() || isSubmitting}
                   className="gap-2"
                 >
                   Continue
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               ) : (
-                <Button onClick={handleSubmit} className="gap-2">
-                  Submit request
-                  <ArrowRight className="w-4 h-4" />
+                <Button onClick={handleSubmit} disabled={isSubmitting} className="gap-2">
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      Submit request
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </Button>
               )}
             </div>

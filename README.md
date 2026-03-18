@@ -22,6 +22,7 @@ A monorepo containing the official websites for Zaplit - a boutique AI agent age
 - **Icons**: Lucide React
 - **Package Manager**: pnpm
 - **Deployment**: Google Cloud Run (containerized)
+- **Form Backend**: n8n Webhooks
 
 ---
 
@@ -30,9 +31,16 @@ A monorepo containing the official websites for Zaplit - a boutique AI agent age
 ```
 zaplit/
 ├── zaplit-com/          # Business website (zaplit.com)
-│   ├── app/             # Next.js App Router pages
-│   ├── components/      # React components
-│   │   └── ui/          # shadcn/ui components
+│   ├── app/
+│   │   ├── api/submit-form/   # Form submission API route
+│   │   ├── contact/page.tsx   # Contact form
+│   │   └── ...
+│   ├── components/
+│   │   ├── book-demo-section.tsx  # Multi-step consultation form
+│   │   └── ui/                    # shadcn/ui components
+│   ├── lib/
+│   │   ├── form-submission.ts     # Form submission hook
+│   │   └── utils.ts
 │   ├── public/          # Static assets
 │   ├── dist/            # Build output (static export)
 │   ├── Dockerfile       # Container config for Cloud Run
@@ -42,6 +50,8 @@ zaplit/
 ├── zaplit-org/          # Nonprofit website (zaplit.org)
 │   └── (same structure)
 │
+├── .env.example         # Environment variables template
+├── LICENSE              # Proprietary license
 └── README.md            # This file
 ```
 
@@ -83,12 +93,12 @@ pnpm build
 
 ### Architecture
 
-Both sites are deployed as **containerized static sites** on **Google Cloud Run**:
+Both sites are deployed as **containerized Next.js apps** on **Google Cloud Run**:
 
-1. Next.js builds to static HTML (`dist/`)
-2. Nginx serves the static files
-3. Docker container is built and pushed to Cloud Run
-4. Cloud Run provides HTTPS + auto-scaling
+1. Next.js builds the application
+2. Docker container runs Next.js production server on port 8080
+3. Cloud Run provides HTTPS + auto-scaling
+4. API routes (like `/api/submit-form`) work for form submissions
 
 ### GCP Project
 
@@ -174,6 +184,107 @@ Or modify the `Cache-Control` headers in `nginx.conf`.
 
 ---
 
+## Form Integration (n8n)
+
+All forms submit to n8n workflows via webhooks for processing, notifications, and CRM integration.
+
+### How It Works
+
+1. User fills out a form (consultation, contact, or newsletter)
+2. Form data is sent to `/api/submit-form` (Next.js API route)
+3. API route validates data, applies rate limiting
+4. Data is forwarded to n8n webhook URL
+5. n8n processes the submission (notifications, CRM, etc.)
+
+### Environment Variables
+
+Create `.env.local` in each project root:
+
+```env
+# N8N Webhook URLs - Get these from your n8n instance
+N8N_WEBHOOK_CONSULTATION=https://your-n8n-instance.com/webhook/consultation
+N8N_WEBHOOK_CONTACT=https://your-n8n-instance.com/webhook/contact
+N8N_WEBHOOK_NEWSLETTER=https://your-n8n-instance.com/webhook/newsletter
+
+# Optional: Webhook secret for additional security
+N8N_WEBHOOK_SECRET=your-secret-key-here
+```
+
+### Setting Up n8n Webhooks
+
+1. **Create a Webhook node** in n8n
+2. **Set HTTP Method**: POST
+3. **Set Response Mode**: `Last Node` or `Response Node`
+4. **Copy the Webhook URL** and add it to your `.env.local`
+5. **Optional: Add Authentication**
+   - Set header name: `X-Webhook-Secret`
+   - Set secret value in both n8n and `.env.local`
+
+### Form Data Structure
+
+All forms submit with this JSON structure:
+
+```json
+{
+  "formType": "consultation|contact|newsletter",
+  "data": {
+    // Form-specific fields
+    "name": "...",
+    "email": "...",
+    "company": "...",
+    // etc.
+  },
+  "metadata": {
+    "submittedAt": "2026-03-18T20:30:00.000Z",
+    "source": "zaplit-com|zaplit-org",
+    "url": "https://zaplit.com/book-demo",
+    "ip": "xxx.xxx.xxx.xxx",
+    "userAgent": "Mozilla/5.0..."
+  }
+}
+```
+
+### Forms Available
+
+| Form | Location | Form Type | Fields |
+|------|----------|-----------|--------|
+| **Consultation** | `/#book-demo` | `consultation` | Name, company, email, role, team size, tech stack, security level, compliance, message |
+| **Contact** | `/contact` | `contact` | Name, email, company, message |
+| **Newsletter** | `/blog` | `newsletter` | Email only |
+
+### Security Features
+
+- **Rate limiting**: 5 submissions per IP per minute
+- **Email validation**: Required for all forms
+- **Field validation**: Required fields enforced server-side
+- **Optional webhook secret**: HMAC header verification
+- **HTTPS only**: All webhook URLs must use HTTPS
+
+### Testing Forms Locally
+
+```bash
+# Start dev server
+cd zaplit-com && pnpm dev
+
+# Test API health
+curl http://localhost:3000/api/submit-form
+
+# Test form submission
+curl -X POST http://localhost:3000/api/submit-form \
+  -H "Content-Type: application/json" \
+  -d '{
+    "formType": "contact",
+    "data": {
+      "name": "Test User",
+      "email": "test@example.com",
+      "message": "Hello from test"
+    },
+    "metadata": {"url": "http://localhost:3000/contact"}
+  }'
+```
+
+---
+
 ## Key Components
 
 ### Background Boxes (Animated Grid)
@@ -190,17 +301,7 @@ The consultation booking form (`components/book-demo-section.tsx`):
 - Step 1: Contact information
 - Step 2: Tech stack selection
 - Step 3: Security requirements
-
----
-
-## Environment Variables
-
-Create `.env.local` in each project root if needed:
-
-```env
-# Example - add actual secrets as needed
-NEXT_PUBLIC_ANALYTICS_ID=your_id
-```
+- Submits to n8n webhook for processing
 
 ---
 
@@ -232,6 +333,11 @@ Both projects use **static export** (`output: 'export'` in `next.config.mjs`):
 **Domain shows old version:**
 - Check domain mapping points to correct service
 - SSL certificate provisioning may take 2-5 minutes
+
+**Form submissions failing:**
+- Check `N8N_WEBHOOK_*` environment variables are set
+- Verify webhook URLs are accessible
+- Check Cloud Run logs for errors
 
 ---
 
