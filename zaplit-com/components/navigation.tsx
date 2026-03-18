@@ -26,8 +26,13 @@ export function Navigation() {
   }, [])
 
   const toggleTheme = () => {
-    setIsDark(!isDark)
-    document.documentElement.classList.toggle("light")
+    const newDark = !isDark
+    setIsDark(newDark)
+    if (newDark) {
+      document.documentElement.classList.add("dark")
+    } else {
+      document.documentElement.classList.remove("dark")
+    }
   }
 
   return (
