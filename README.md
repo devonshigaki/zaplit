@@ -63,6 +63,7 @@ zaplit/
 
 - Node.js 18+
 - pnpm (`npm install -g pnpm`)
+- Docker & Docker Compose (for local n8n)
 - Google Cloud SDK (for deployment)
 
 ### Local Development
@@ -86,6 +87,60 @@ The dev server runs at `http://localhost:3000`
 # Static export (creates `dist/` folder)
 pnpm build
 ```
+
+---
+
+## Local Development with n8n
+
+For local testing of form submissions, you can run n8n locally:
+
+```bash
+# Start local n8n
+cd local-dev
+docker-compose up -d
+
+# n8n will be available at http://localhost:5678
+# Username: admin
+# Password: zaplit-local-dev
+```
+
+### Setting Up Local Form Testing
+
+1. **Start n8n:**
+   ```bash
+   cd local-dev && docker-compose up -d
+   ```
+
+2. **Import test workflows:**
+   - Open http://localhost:5678
+   - Workflows → Import from File
+   - Import `n8n-workflows/consultation-form-workflow.json`
+   - Import `n8n-workflows/contact-form-workflow.json`
+   - Activate each workflow
+
+3. **Start Next.js dev server:**
+   ```bash
+   cd zaplit-com && pnpm dev
+   ```
+
+4. **Test forms:**
+   - Go to http://localhost:3000/#book-demo
+   - Submit a test consultation form
+   - Check n8n Executions to see the data
+
+### Testing with Scripts
+
+```bash
+cd local-dev
+
+# Test all forms
+./test-forms.sh all
+
+# Test specific form
+./test-forms.sh consultation
+```
+
+See `local-dev/SETUP_GUIDE.md` for detailed instructions.
 
 ---
 
