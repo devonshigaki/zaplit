@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Form-Source": "zaplit-com",
+        "X-Form-Source": "zaplit-org",
         ...(process.env.N8N_WEBHOOK_SECRET && {
           "X-Webhook-Secret": process.env.N8N_WEBHOOK_SECRET,
         }),

@@ -1,43 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  consultationFormSchema,
-  contactFormSchema,
-  newsletterFormSchema,
-  formTypeSchema,
-  sanitizeInput,
-  type FormType,
-} from "@/lib/schemas/forms";
 
-const rateLimit = new Map<string, { count: number; resetTime: number }>();
+// Configuration
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1000;
 
-// Twenty CRM configuration
-const TWENTY_BASE_URL = process.env.TWENTY_BASE_URL || "http://localhost:3001";
-const TWENTY_API_KEY = process.env.TWENTY_API_KEY;
+// In-memory rate limit store (use Redis in production for multi-instance)
+const rateLimit = new Map<string, { count: number; resetTime: number }>();
 
-// Audit logging (console for now, should be database in production)
-interface AuditEvent {
-  id: string;
-  timestamp: string;
-  action: "FORM_SUBMITTED" | "CRM_COMPANY_CREATED" | "CRM_PERSON_CREATED" | "CRM_NOTE_CREATED" | "CRM_ERROR" | "VALIDATION_ERROR" | "RATE_LIMITED";
-  formType: FormType;
+// Schemas
+const formTypeSchema = z.enum(["consultation", "contact", "newsletter"]);
+
+const contactFormSchema = z.object({
+  name: z.string().min(2, "Name is required"),
+  email: z.string().email("Valid email required"),
+  company: z.string().optional(),
+  subject: z.string().optional(),
+  message: z.string().min(10, "Message must be at least 10 characters"),
+  website: z.string().optional(), // Honeypot
+});
+
+const consultationFormSchema = z.object({
+  name: z.string().min(2, "Name is required"),
+  email: z.string().email("Valid email required"),
+  company: z.string().min(2, "Company is required"),
+  role: z.string().min(2, "Role is required"),
+  teamSize: z.enum(["1-10", "11-50", "51-200", "201-500", "501-1000", "1000+"]),
+  techStack: z.array(z.string()).optional(),
+  securityLevel: z.enum(["standard", "enhanced", "enterprise"]).optional(),
+  compliance: z.array(z.string()).optional(),
+  message: z.string().optional(),
+  website: z.string().optional(), // Honeypot
+});
+
+const newsletterFormSchema = z.object({
+  email: z.string().email("Valid email required"),
+  website: z.string().optional(), // Honeypot
+});
+
+const schemaMap = {
+  consultation: consultationFormSchema,
+  contact: contactFormSchema,
+  newsletter: newsletterFormSchema,
+};
+
+// Audit logging
+function logAudit(event: {
+  action: string;
+  formType: string;
   email: string;
   ipHash: string;
   success: boolean;
-  details?: Record<string, unknown>;
   error?: string;
-}
-
-function logAudit(event: Omit<AuditEvent, "id" | "timestamp">) {
-  const auditEntry: AuditEvent = {
+  details?: Record<string, unknown>;
+}) {
+  const auditEntry = {
     id: crypto.randomUUID(),
     timestamp: new Date().toISOString(),
     ...event,
   };
-
-  // In production, write to database
   console.log("[AUDIT]", JSON.stringify(auditEntry));
 }
 
@@ -50,14 +73,8 @@ function hashIP(ip: string): string {
     .slice(0, 16);
 }
 
-// Retry configuration
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 1000;
-
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  operationName: string
-): Promise<T | null> {
+// Retry wrapper
+async function withRetry<T>(fn: () => Promise<T>, operationName: string): Promise<T | null> {
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -65,9 +82,8 @@ async function withRetry<T>(
       return await fn();
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      
       if (attempt < MAX_RETRIES) {
-        const delay = RETRY_DELAY_MS * Math.pow(2, attempt - 1); // Exponential backoff
+        const delay = RETRY_DELAY_MS * Math.pow(2, attempt - 1);
         console.log(`[RETRY] ${operationName} failed (attempt ${attempt}), retrying in ${delay}ms...`);
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
@@ -78,125 +94,59 @@ async function withRetry<T>(
   return null;
 }
 
-async function twentyGraphQL(
-  query: string,
-  variables: Record<string, unknown>,
-  operationName: string
-) {
-  if (!TWENTY_API_KEY) {
-    console.error("[CRM] TWENTY_API_KEY not configured");
-    return null;
+// Send to n8n webhook
+async function sendToN8N(
+  formType: string,
+  data: unknown,
+  metadata: Record<string, unknown>
+): Promise<boolean> {
+  const webhookUrl =
+    (formType === "consultation" && process.env.N8N_WEBHOOK_CONSULTATION) ||
+    (formType === "contact" && process.env.N8N_WEBHOOK_CONTACT) ||
+    (formType === "newsletter" && process.env.N8N_WEBHOOK_NEWSLETTER) ||
+    process.env.N8N_WEBHOOK_URL;
+
+  if (!webhookUrl) {
+    console.error("[N8N] No webhook URL configured");
+    return false;
   }
 
   return withRetry(async () => {
-    const response = await fetch(`${TWENTY_BASE_URL}/graphql`, {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    if (process.env.N8N_WEBHOOK_SECRET) {
+      headers["X-Webhook-Secret"] = process.env.N8N_WEBHOOK_SECRET;
+    }
+
+    const response = await fetch(webhookUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${TWENTY_API_KEY}`,
-      },
-      body: JSON.stringify({ query, variables }),
+      headers,
+      body: JSON.stringify({
+        formType,
+        data,
+        metadata,
+      }),
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const result = await response.json();
-    if (result.errors) {
-      throw new Error(`GraphQL errors: ${JSON.stringify(result.errors)}`);
-    }
-
-    return result.data;
-  }, operationName);
+    return true;
+  }, "n8n webhook") as Promise<boolean>;
 }
 
-async function createCompany(name: string, employees?: number) {
-  const query = `
-    mutation CreateCompany($data: CompanyCreateInput!) {
-      createCompany(data: $data) {
-        id
-        name
-      }
-    }
-  `;
-
-  const variables = {
-    data: {
-      name,
-      ...(employees && { employees }),
-    },
-  };
-
-  const result = await twentyGraphQL(query, variables, "createCompany");
-  return result?.createCompany;
-}
-
-async function createPerson(
-  firstName: string,
-  lastName: string,
-  email: string,
-  jobTitle?: string,
-  companyId?: string
-) {
-  const query = `
-    mutation CreatePerson($data: PersonCreateInput!) {
-      createPerson(data: $data) {
-        id
-        name { firstName lastName }
-        emails { primaryEmail }
-        jobTitle
-      }
-    }
-  `;
-
-  const variables: Record<string, unknown> = {
-    data: {
-      name: { firstName, lastName },
-      emails: { primaryEmail: email, additionalEmails: [] },
-      ...(jobTitle && { jobTitle }),
-      ...(companyId && { companyId }),
-    },
-  };
-
-  const result = await twentyGraphQL(query, variables, "createPerson");
-  return result?.createPerson;
-}
-
-async function createNote(title: string, body: string) {
-  const query = `
-    mutation CreateNote($data: NoteCreateInput!) {
-      createNote(data: $data) {
-        id
-        title
-        bodyV2 { markdown }
-      }
-    }
-  `;
-
-  const variables = {
-    data: {
-      title,
-      bodyV2: { markdown: body },
-    },
-  };
-
-  const result = await twentyGraphQL(query, variables, "createNote");
-  return result?.createNote;
-}
-
-// Schema selection based on form type
-const schemaMap = {
-  consultation: consultationFormSchema,
-  contact: contactFormSchema,
-  newsletter: newsletterFormSchema,
-};
-
+// Main handler
 export async function POST(request: NextRequest) {
-  const ip = request.ip ?? "unknown";
+  // Get IP from headers (Cloud Run/Cloudflare)
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? 
+             request.headers.get("x-real-ip") ?? 
+             "unknown";
   const ipHash = hashIP(ip);
   const now = Date.now();
+  const submissionId = crypto.randomUUID();
 
   // Rate limiting
   const clientData = rateLimit.get(ip);
@@ -204,7 +154,7 @@ export async function POST(request: NextRequest) {
     if (clientData.count >= RATE_LIMIT_MAX) {
       logAudit({
         action: "RATE_LIMITED",
-        formType: "contact",
+        formType: "unknown",
         email: "",
         ipHash,
         success: false,
@@ -212,7 +162,7 @@ export async function POST(request: NextRequest) {
       });
       return NextResponse.json(
         { error: "Rate limit exceeded. Please try again later." },
-        { status: 429 }
+        { status: 429, headers: { "Retry-After": "60" } }
       );
     }
     clientData.count++;
@@ -229,28 +179,23 @@ export async function POST(request: NextRequest) {
     if (!formTypeResult.success) {
       logAudit({
         action: "VALIDATION_ERROR",
-        formType: "contact",
+        formType: "unknown",
         email: data?.email || "",
         ipHash,
         success: false,
         error: "Invalid form type",
-        details: { errors: formTypeResult.error.flatten() },
       });
-      return NextResponse.json(
-        { error: "Invalid form type" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid form type" }, { status: 400 });
     }
 
-    // Validate form data with Zod
+    // Validate form data
     const schema = schemaMap[formTypeResult.data];
     const validationResult = schema.safeParse(data);
 
     if (!validationResult.success) {
       const errors: Record<string, string> = {};
       validationResult.error.issues.forEach((issue) => {
-        const path = issue.path.join(".");
-        errors[path] = issue.message;
+        errors[issue.path.join(".")] = issue.message;
       });
 
       logAudit({
@@ -271,255 +216,59 @@ export async function POST(request: NextRequest) {
 
     const validatedData = validationResult.data;
 
-    // Honeypot check
+    // Honeypot check (bot detection)
     if (validatedData.website && validatedData.website.length > 0) {
-      // Bot detected - silently accept but don't process
       return NextResponse.json(
         { success: true, message: "Form submitted successfully" },
         { status: 200 }
       );
     }
 
-    // Log successful form submission
+    // Log successful submission
     logAudit({
       action: "FORM_SUBMITTED",
       formType: formTypeResult.data,
       email: validatedData.email,
       ipHash,
       success: true,
-      details: {
-        name: "name" in validatedData ? validatedData.name : undefined,
-        company: "company" in validatedData ? validatedData.company : undefined,
-      },
     });
 
-    // Extract name parts (only for forms that have names)
-    const nameParts = "name" in validatedData ? validatedData.name.split(" ") : ["", ""];
-    const firstName = nameParts[0] || "";
-    const lastName = nameParts.slice(1).join(" ") || "";
-
-    // Map team size to employee count
-    const teamSizeMap: Record<string, number> = {
-      "1-10": 10,
-      "11-50": 50,
-      "51-200": 200,
-      "201-500": 500,
-      "501-1000": 1000,
-      "1000+": 1000,
+    // Send to n8n (async, don't block response)
+    const metadata = {
+      submittedAt: new Date().toISOString(),
+      source: "zaplit-com",
+      submissionId,
+      ipHash,
+      userAgent: request.headers.get("user-agent"),
     };
 
-    let company = null;
-    let person = null;
-    let note = null;
-    let crmErrors: string[] = [];
-
-    // Create CRM records (only for consultation and contact forms)
-    if (formTypeResult.data !== "newsletter") {
-      const consultationData =
-        formTypeResult.data === "consultation"
-          ? (validatedData as z.infer<typeof consultationFormSchema>)
-          : null;
-
-      const employees = consultationData?.teamSize
-        ? teamSizeMap[consultationData.teamSize]
-        : undefined;
-
-      // Create Company
-      if ("company" in validatedData && validatedData.company) {
-        try {
-          company = await createCompany(
-            sanitizeInput(validatedData.company),
-            employees
-          );
-          if (company) {
-            logAudit({
-              action: "CRM_COMPANY_CREATED",
-              formType: formTypeResult.data,
-              email: validatedData.email,
-              ipHash,
-              success: true,
-              details: { companyId: company.id, companyName: company.name },
-            });
-          } else {
-            crmErrors.push("Failed to create company");
-          }
-        } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : String(error);
-          crmErrors.push(`Company creation error: ${errorMsg}`);
-          logAudit({
-            action: "CRM_ERROR",
-            formType: formTypeResult.data,
-            email: validatedData.email,
-            ipHash,
-            success: false,
-            error: errorMsg,
-            details: { operation: "createCompany" },
-          });
-        }
+    // Fire and forget - don't block user response
+    sendToN8N(formTypeResult.data, validatedData, metadata).then((success) => {
+      if (success) {
+        console.log("[N8N] Webhook sent successfully");
+      } else {
+        console.error("[N8N] Webhook failed");
       }
+    });
 
-      // Create Person
-      try {
-        const jobTitle =
-          "role" in validatedData ? validatedData.role : undefined;
-        person = await createPerson(
-          firstName,
-          lastName,
-          validatedData.email,
-          jobTitle,
-          company?.id
-        );
-        if (person) {
-          logAudit({
-            action: "CRM_PERSON_CREATED",
-            formType: formTypeResult.data,
-            email: validatedData.email,
-            ipHash,
-            success: true,
-            details: { personId: person.id },
-          });
-        } else {
-          crmErrors.push("Failed to create person");
-        }
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        crmErrors.push(`Person creation error: ${errorMsg}`);
-        logAudit({
-          action: "CRM_ERROR",
-          formType: formTypeResult.data,
-          email: validatedData.email,
-          ipHash,
-          success: false,
-          error: errorMsg,
-          details: { operation: "createPerson" },
-        });
-      }
-
-      // Create Note
-      try {
-        let noteTitle = "";
-        let noteBody = "";
-
-        if (formTypeResult.data === "consultation" && consultationData) {
-          noteTitle = `Consultation Request - ${consultationData.company}`;
-          noteBody = `## Consultation Request
-
-**Name:** ${validatedData.name}
-**Email:** ${validatedData.email}
-**Company:** ${consultationData.company}
-**Role:** ${consultationData.role}
-**Team Size:** ${consultationData.teamSize}
-
-### Technical Requirements
-**Tech Stack:** ${JSON.stringify(consultationData.techStack)}
-**Security Level:** ${consultationData.securityLevel}
-**Compliance:** ${JSON.stringify(consultationData.compliance)}
-
-### Message
-${consultationData.message || "No message provided"}
-
----
-**Submitted:** ${new Date().toISOString()}
-**Source:** zaplit-com
-**IP Hash:** ${ipHash}`;
-        } else {
-          const contactData = validatedData as z.infer<typeof contactFormSchema>;
-          noteTitle = `Contact Form - ${contactData.subject}`;
-          noteBody = `## Contact Form Submission
-
-**From:** ${validatedData.name} <${validatedData.email}>
-**Subject:** ${contactData.subject}
-
-### Message
-${contactData.message}
-
----
-**Submitted:** ${new Date().toISOString()}
-**Source:** zaplit-com
-**IP Hash:** ${ipHash}`;
-        }
-
-        note = await createNote(noteTitle, noteBody);
-        if (note) {
-          logAudit({
-            action: "CRM_NOTE_CREATED",
-            formType: formTypeResult.data,
-            email: validatedData.email,
-            ipHash,
-            success: true,
-            details: { noteId: note.id },
-          });
-        } else {
-          crmErrors.push("Failed to create note");
-        }
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        crmErrors.push(`Note creation error: ${errorMsg}`);
-        logAudit({
-          action: "CRM_ERROR",
-          formType: formTypeResult.data,
-          email: validatedData.email,
-          ipHash,
-          success: false,
-          error: errorMsg,
-          details: { operation: "createNote" },
-        });
-      }
-    }
-
-    // Forward to n8n if configured
-    const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL;
-    if (n8nWebhookUrl) {
-      fetch(n8nWebhookUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(process.env.N8N_WEBHOOK_SECRET && {
-            "X-Webhook-Secret": process.env.N8N_WEBHOOK_SECRET,
-          }),
-        },
-        body: JSON.stringify({
-          formType: formTypeResult.data,
-          data: validatedData,
-          metadata: {
-            submittedAt: new Date().toISOString(),
-            source: "zaplit-com",
-            ipHash,
-            userAgent: request.headers.get("user-agent"),
-          },
-          crmData: {
-            companyId: company?.id,
-            personId: person?.id,
-            noteId: note?.id,
-            errors: crmErrors.length > 0 ? crmErrors : undefined,
-          },
-        }),
-      }).catch((err) => console.error("[N8N] Webhook error:", err));
-    }
-
+    // Return success immediately
     return NextResponse.json({
       success: true,
       message: "Form submitted successfully",
-      id: crypto.randomUUID(),
-      crmData: {
-        companyCreated: !!company,
-        personCreated: !!person,
-        noteCreated: !!note,
-        errors: crmErrors.length > 0 ? crmErrors : undefined,
-      },
+      id: submissionId,
     });
+
   } catch (error) {
     console.error("[FORM] Submission error:", error);
     const errorMsg = error instanceof Error ? error.message : "Unknown error";
-    
+
     logAudit({
-      action: "CRM_ERROR",
-      formType: "contact",
+      action: "FORM_ERROR",
+      formType: "unknown",
       email: "",
       ipHash,
       success: false,
       error: errorMsg,
-      details: { operation: "formSubmission" },
     });
 
     return NextResponse.json(
@@ -527,4 +276,9 @@ ${contactData.message}
       { status: 500 }
     );
   }
+}
+
+// Health check endpoint
+export async function GET() {
+  return NextResponse.json({ status: "ok", timestamp: new Date().toISOString() });
 }

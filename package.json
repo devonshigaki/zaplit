@@ -1,0 +1,44 @@
+{
+  "name": "zaplit",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Zaplit website monorepo",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "scripts": {
+    "dev:com": "cd zaplit-com && pnpm dev",
+    "dev:org": "cd zaplit-org && pnpm dev",
+    "build": "pnpm build:com && pnpm build:org",
+    "build:com": "cd zaplit-com && pnpm build",
+    "build:org": "cd zaplit-org && pnpm build",
+    "typecheck": "pnpm typecheck:com && pnpm typecheck:org",
+    "typecheck:com": "cd zaplit-com && tsc --noEmit",
+    "typecheck:org": "cd zaplit-org && tsc --noEmit",
+    "lint": "pnpm lint:com && pnpm lint:org",
+    "lint:com": "cd zaplit-com && next lint",
+    "lint:org": "cd zaplit-org && next lint",
+    "lint:fix": "pnpm lint:com --fix && pnpm lint:org --fix",
+    "test": "pnpm test:com && pnpm test:org",
+    "test:com": "cd zaplit-com && vitest run",
+    "test:org": "cd zaplit-org && vitest run",
+    "test:watch": "cd zaplit-com && vitest",
+    "test:e2e": "playwright test",
+    "ci": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
+    "deploy:com": "ts-node scripts/deploy.ts zaplit-com",
+    "deploy:org": "ts-node scripts/deploy.ts zaplit-org",
+    "clean": "rm -rf zaplit-com/dist zaplit-org/dist zaplit-com/.next zaplit-org/.next"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.42.0",
+    "@types/node": "^22.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.0",
+    "vitest": "^1.3.0"
+  },
+  "workspaces": [
+    "zaplit-com",
+    "zaplit-org"
+  ]
+}

@@ -1,11 +1,22 @@
-runtime: python311
+runtime: custom
+env: flex
 
-handlers:
-  - url: /_next/static
-    static_dir: dist/_next/static
-  - url: /(.*\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|json|xml|txt|webmanifest))$
-    static_files: dist/\1
-    upload: dist/.*\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|json|xml|txt|webmanifest)$
-  - url: /.*
-    static_files: dist/index.html
-    upload: dist/index.html
+service: default
+
+resources:
+  cpu: 1
+  memory_gb: 1
+  disk_size_gb: 10
+
+automatic_scaling:
+  min_num_instances: 1
+  max_num_instances: 5
+  cool_down_period_sec: 60
+  cpu_utilization:
+    target_utilization: 0.6
+
+env_variables:
+  NODE_ENV: production
+  N8N_WEBHOOK_CONSULTATION: "https://dam-boolean-virginia-advertiser.trycloudflare.com/webhook/consultation"
+  N8N_WEBHOOK_CONTACT: "https://dam-boolean-virginia-advertiser.trycloudflare.com/webhook/contact"
+  N8N_WEBHOOK_SECRET: "local-dev-secret-key"

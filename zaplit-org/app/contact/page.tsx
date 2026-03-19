@@ -2,16 +2,66 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Terminal, ArrowLeft, Mail, MessageSquare, Building2, Check } from "lucide-react"
+import { Terminal, ArrowLeft, Mail, MessageSquare, Building2, Check, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    company: "",
+    message: ""
+  })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setIsSubmitting(true)
+    setError(null)
+
+    try {
+      const payload = {
+        formType: "contact",
+        data: {
+          name: formData.name,
+          email: formData.email,
+          company: formData.company,
+          message: formData.message
+        },
+        metadata: {
+          submittedAt: new Date().toISOString(),
+          source: "zaplit-org",
+          url: window.location.href
+        }
+      }
+
+      const response = await fetch("/api/submit-form", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || "Failed to submit form")
+      }
+
+      setSubmitted(true)
+    } catch (err) {
+      console.error("Form submission error:", err)
+      setError(err instanceof Error ? err.message : "An error occurred. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -95,29 +145,64 @@ export default function ContactPage() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {error && (
+                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                      <p className="text-sm text-destructive">{error}</p>
+                    </div>
+                  )}
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Name</label>
-                    <Input placeholder="Your name" required />
+                    <label htmlFor="name" className="text-sm font-medium mb-2 block">Name</label>
+                    <Input 
+                      id="name"
+                      name="name"
+                      placeholder="Your name" 
+                      required 
+                      value={formData.name}
+                      onChange={handleChange}
+                      disabled={isSubmitting}
+                    />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Email</label>
-                    <Input type="email" placeholder="you@company.com" required />
+                    <label htmlFor="email" className="text-sm font-medium mb-2 block">Email</label>
+                    <Input 
+                      id="email"
+                      name="email"
+                      type="email" 
+                      placeholder="you@company.com" 
+                      required 
+                      value={formData.email}
+                      onChange={handleChange}
+                      disabled={isSubmitting}
+                    />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Company</label>
-                    <Input placeholder="Your company" />
+                    <label htmlFor="company" className="text-sm font-medium mb-2 block">Company</label>
+                    <Input 
+                      id="company"
+                      name="company"
+                      placeholder="Your company" 
+                      value={formData.company}
+                      onChange={handleChange}
+                      disabled={isSubmitting}
+                    />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Message</label>
+                    <label htmlFor="message" className="text-sm font-medium mb-2 block">Message</label>
                     <textarea
+                      id="message"
+                      name="message"
                       className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-foreground resize-none"
                       rows={4}
                       placeholder="How can we help?"
                       required
+                      value={formData.message}
+                      onChange={handleChange}
+                      disabled={isSubmitting}
                     />
                   </div>
-                  <Button type="submit" className="w-full">
-                    Send Message
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? "Sending..." : "Send Message"}
                   </Button>
                 </form>
               )}
