@@ -1,0 +1,572 @@
+# Alert Rules for Loki Log-Based Alerting (Production)
+# 
+# Import these rules into Grafana Cloud Alerting or Prometheus Alertmanager
+# These rules analyze log patterns and trigger alerts based on log content
+#
+# Groups:
+#   - n8n-log-alerts: n8n workflow and execution alerts
+#   - nginx-log-alerts: Web server and API alerts
+#   - twenty-crm-log-alerts: CRM integration alerts
+#   - system-log-alerts: Infrastructure alerts
+#   - circuit-breaker-alerts: Resilience pattern alerts
+#   - dlq-alerts: Dead letter queue alerts
+
+groups:
+  # ============================================
+  # n8n Workflow Alerts
+  # ============================================
+  - name: n8n-log-alerts
+    interval: 1m
+    rules:
+      # ----------------------------------------
+      # High Error Rate Alert
+      # ----------------------------------------
+      - alert: N8nHighErrorRate
+        expr: |
+          (
+            sum(rate({service="n8n", level="error"}[5m])) 
+            / 
+            sum(rate({service="n8n"}[5m]))
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          service: n8n
+          team: platform
+        annotations:
+          summary: "n8n error rate is high"
+          description: "Error rate is {{ $value | humanizePercentage }} for the last 5 minutes"
+          runbook_url: "https://wiki.internal/runbooks/n8n-high-error-rate"
+          dashboard_url: "https://grafana.zaplit.com/d/unified-observability"
+      
+      # ----------------------------------------
+      # Webhook Processing Failures
+      # ----------------------------------------
+      - alert: N8nWebhookFailures
+        expr: |
+          sum(rate({service="n8n"} 
+            |= "webhook" 
+            |~ "failed|error|timeout" [5m]
+          )) > 0.1
+        for: 1m
+        labels:
+          severity: critical
+          service: n8n
+          component: webhook
+        annotations:
+          summary: "Webhook processing failures detected"
+          description: "{{ $value }} webhook failures per second"
+          dashboard_url: "https://grafana.zaplit.com/d/unified-observability"
+      
+      # ----------------------------------------
+      # CRM Integration Failures
+      # ----------------------------------------
+      - alert: CRMIntegrationFailures
+        expr: |
+          sum(rate({service="n8n"} 
+            | json 
+            | msg=~"CRM.*(failed|error|timeout)|twenty.*(failed|error)" [5m]
+          )) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          service: n8n
+          integration: twenty-crm
+        annotations:
+          summary: "CRM integration experiencing issues"
+          description: "{{ $value }} CRM failures per second"
+      
+      # ----------------------------------------
+      # Database Connection Errors
+      # ----------------------------------------
+      - alert: DatabaseConnectionErrors
+        expr: |
+          sum(rate({service="n8n"} 
+            |~ "ECONNREFUSED|connection.*refused|database.*unavailable|pg.*error" [5m]
+          )) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: n8n
+          component: database
+        annotations:
+          summary: "Database connection issues"
+          description: "Database connection errors detected in n8n logs"
+      
+      # ----------------------------------------
+      # Execution Timeout Alert
+      # ----------------------------------------
+      - alert: N8nExecutionTimeouts
+        expr: |
+          sum(rate({service="n8n"} 
+            |~ "timeout|timed out|execution.*took.*too.*long" [5m]
+          )) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          service: n8n
+        annotations:
+          summary: "Execution timeouts increasing"
+          description: "{{ $value }} timeouts per second"
+      
+      # ----------------------------------------
+      # Memory Pressure Alert
+      # ----------------------------------------
+      - alert: N8nMemoryErrors
+        expr: |
+          sum(rate({service="n8n"} 
+            |~ "out of memory|memory limit|heap exhausted|Memory.*exceeded" [5m]
+          )) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: n8n
+          component: memory
+        annotations:
+          summary: "n8n memory issues detected"
+          description: "Memory errors detected in n8n logs"
+      
+      # ----------------------------------------
+      # Unusual Log Volume (Possible Attack)
+      # ----------------------------------------
+      - alert: UnusualLogVolume
+        expr: |
+          (
+            sum(rate({service="n8n"}[5m])) 
+            > 
+            2 * avg_over_time(sum(rate({service="n8n"}[5m]))[1h:5m])
+          )
+        for: 5m
+        labels:
+          severity: warning
+          service: n8n
+          type: anomaly
+        annotations:
+          summary: "Unusual log volume detected"
+          description: "Log volume is 2x higher than 1h average, possible attack or issue"
+      
+      # ----------------------------------------
+      # Workflow Specific - Consultation Form Failures
+      # ----------------------------------------
+      - alert: ConsultationFormFailures
+        expr: |
+          sum(rate({service="n8n"} 
+            | json 
+            | workflow_name="consultation-form" 
+            | level="error" [5m]
+          )) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+          service: n8n
+          workflow: consultation-form
+        annotations:
+          summary: "Consultation form workflow failing"
+          description: "{{ $value }} errors per second in consultation form"
+      
+      # ----------------------------------------
+      # Workflow Specific - Demo Booking Failures
+      # ----------------------------------------
+      - alert: DemoBookingFailures
+        expr: |
+          sum(rate({service="n8n"} 
+            | json 
+            | workflow_name="book-demo" 
+            | level="error" [5m]
+          )) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+          service: n8n
+          workflow: book-demo
+        annotations:
+          summary: "Demo booking workflow failing"
+          description: "{{ $value }} errors per second in demo booking workflow"
+      
+      # ----------------------------------------
+      # External API Rate Limiting
+      # ----------------------------------------
+      - alert: ExternalAPIRateLimited
+        expr: |
+          sum(rate({service="n8n"} 
+            |~ "rate.*limit|429|too.*many.*requests" [5m]
+          )) > 0
+        for: 2m
+        labels:
+          severity: warning
+          service: n8n
+          type: rate-limit
+        annotations:
+          summary: "External API rate limiting detected"
+          description: "n8n is being rate limited by external APIs"
+
+  # ============================================
+  # Nginx Web Server Alerts
+  # ============================================
+  - name: nginx-log-alerts
+    interval: 1m
+    rules:
+      # ----------------------------------------
+      # High 5xx Error Rate
+      # ----------------------------------------
+      - alert: NginxHigh5xxRate
+        expr: |
+          (
+            sum(rate({service="nginx"} | json | status=~"5.."[5m]))
+            /
+            sum(rate({service="nginx"}[5m]))
+          ) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+          service: nginx
+        annotations:
+          summary: "High 5xx error rate"
+          description: "5xx rate is {{ $value | humanizePercentage }}"
+      
+      # ----------------------------------------
+      # Slow Response Time (p95)
+      # ----------------------------------------
+      - alert: NginxSlowResponses
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate({service="nginx"} | json | unwrap request_time [5m])) by (le)
+          ) > 5
+        for: 3m
+        labels:
+          severity: warning
+          service: nginx
+        annotations:
+          summary: "Slow responses detected"
+          description: "p95 response time is {{ $value }}s"
+      
+      # ----------------------------------------
+      # Rate Limiting Triggered
+      # ----------------------------------------
+      - alert: RateLimitingTriggered
+        expr: |
+          sum(rate({service="nginx"} | json | status="429"[5m])) > 0
+        for: 1m
+        labels:
+          severity: info
+          service: nginx
+        annotations:
+          summary: "Rate limiting active"
+          description: "Clients are being rate limited (429 responses)"
+      
+      # ----------------------------------------
+      # 404 Spike (Potential Scanning)
+      # ----------------------------------------
+      - alert: Nginx404Spike
+        expr: |
+          sum(rate({service="nginx"} | json | status="404"[5m])) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: nginx
+          type: security
+        annotations:
+          summary: "High 404 rate - possible scanning"
+          description: "{{ $value }} 404s per second, possible security scan"
+      
+      # ----------------------------------------
+      # Webhook Endpoint Errors
+      # ----------------------------------------
+      - alert: WebhookEndpointErrors
+        expr: |
+          sum(rate({service="nginx"} 
+            | json
+            | path=~"/webhook.*"
+            | status=~"4..|5.." [5m]
+          )) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+          service: nginx
+          component: webhook
+        annotations:
+          summary: "Webhook endpoint errors"
+          description: "Webhook endpoints returning errors"
+
+  # ============================================
+  # Twenty CRM Integration Alerts
+  # ============================================
+  - name: twenty-crm-log-alerts
+    interval: 1m
+    rules:
+      # ----------------------------------------
+      # Twenty CRM Errors
+      # ----------------------------------------
+      - alert: TwentyCRMErrors
+        expr: |
+          sum(rate({service="twenty-crm", level="error"}[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          service: twenty-crm
+        annotations:
+          summary: "Twenty CRM errors detected"
+          description: "{{ $value }} errors per second"
+      
+      # ----------------------------------------
+      # Twenty CRM API Rate Limit
+      # ----------------------------------------
+      - alert: TwentyCRMRateLimit
+        expr: |
+          sum(rate({service="twenty-crm"} 
+            |~ "rate limit|429|too many requests" [5m]
+          )) > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: twenty-crm
+        annotations:
+          summary: "Twenty CRM rate limiting"
+          description: "API rate limit being hit"
+      
+      # ----------------------------------------
+      # Twenty CRM Slow Responses
+      # ----------------------------------------
+      - alert: TwentyCRMSlowResponses
+        expr: |
+          sum(rate({service="twenty-crm"} 
+            | json
+            | duration > 5000 [5m]
+          )) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+          service: twenty-crm
+        annotations:
+          summary: "Twenty CRM slow responses"
+          description: "CRM API responses taking > 5 seconds"
+
+  # ============================================
+  # Circuit Breaker Alerts
+  # ============================================
+  - name: circuit-breaker-alerts
+    interval: 1m
+    rules:
+      # ----------------------------------------
+      # Circuit Breaker Open
+      # ----------------------------------------
+      - alert: CircuitBreakerOpen
+        expr: |
+          sum(rate({service="n8n"} 
+            |~ "circuit.*breaker.*open|CircuitBreakerOpen" [5m]
+          )) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: n8n
+          pattern: circuit-breaker
+        annotations:
+          summary: "Circuit breaker opened"
+          description: "A circuit breaker has opened, indicating repeated failures"
+      
+      # ----------------------------------------
+      # Circuit Breaker Half-Open
+      # ----------------------------------------
+      - alert: CircuitBreakerHalfOpen
+        expr: |
+          sum(rate({service="n8n"} 
+            |~ "circuit.*breaker.*half|CircuitBreakerHalfOpen" [5m]
+          )) > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: n8n
+          pattern: circuit-breaker
+        annotations:
+          summary: "Circuit breaker half-open"
+          description: "Circuit breaker testing if service has recovered"
+      
+      # ----------------------------------------
+      # Multiple Circuit Breakers Open
+      # ----------------------------------------
+      - alert: MultipleCircuitBreakersOpen
+        expr: |
+          count(sum by (circuit_name) (
+            rate({service="n8n"} |~ "circuit.*breaker.*open" [5m])
+          )) > 3
+        for: 2m
+        labels:
+          severity: critical
+          service: n8n
+          pattern: circuit-breaker
+        annotations:
+          summary: "Multiple circuit breakers open"
+          description: "{{ $value }} circuit breakers are open - systemic failure"
+
+  # ============================================
+  # Dead Letter Queue (DLQ) Alerts
+  # ============================================
+  - name: dlq-alerts
+    interval: 1m
+    rules:
+      # ----------------------------------------
+      # DLQ Messages Increasing
+      # ----------------------------------------
+      - alert: DLQBacklogIncreasing
+        expr: |
+          sum(rate({service="n8n"} 
+            |~ "dlq|DLQ|dead.?letter.*queue|sent.*to.*queue" [5m]
+          )) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: n8n
+          pattern: dlq
+        annotations:
+          summary: "DLQ backlog increasing"
+          description: "Messages are being sent to dead letter queue"
+      
+      # ----------------------------------------
+      # DLQ Message Burst
+      # ----------------------------------------
+      - alert: DLQMessageBurst
+        expr: |
+          sum(rate({service="n8n"} 
+            |~ "dlq|DLQ" [5m]
+          )) > 1
+        for: 2m
+        labels:
+          severity: critical
+          service: n8n
+          pattern: dlq
+        annotations:
+          summary: "DLQ message burst detected"
+          description: "High rate of messages sent to DLQ - immediate attention required"
+      
+      # ----------------------------------------
+      # Max Retries Exceeded
+      # ----------------------------------------
+      - alert: MaxRetriesExceeded
+        expr: |
+          sum(rate({service="n8n"} 
+            |~ "max.*retry.*exceeded|failed.*after.*retry|give.*up" [5m]
+          )) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          service: n8n
+          pattern: retry
+        annotations:
+          summary: "Max retries exceeded"
+          description: "Operations failing after maximum retry attempts"
+
+  # ============================================
+  # System Infrastructure Alerts
+  # ============================================
+  - name: system-log-alerts
+    interval: 5m
+    rules:
+      # ----------------------------------------
+      # Out of Memory Errors
+      # ----------------------------------------
+      - alert: OutOfMemoryErrors
+        expr: |
+          sum(rate({service="system"} |~ "Out of memory|OOM|killed process"[5m])) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "Out of memory errors"
+          description: "OOM killer triggered on system"
+      
+      # ----------------------------------------
+      # Disk Full
+      # ----------------------------------------
+      - alert: DiskFull
+        expr: |
+          sum(rate({service="system"} |~ "No space left on device|disk full"[5m])) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "Disk full errors"
+          description: "Disk space exhausted on system"
+      
+      # ----------------------------------------
+      # SSH Brute Force
+      # ----------------------------------------
+      - alert: SSHBruteForce
+        expr: |
+          sum(rate({service="auth"} |~ "Failed password|Invalid user"[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+          type: security
+        annotations:
+          summary: "SSH brute force detected"
+          description: "Multiple failed SSH attempts detected"
+      
+      # ----------------------------------------
+      # Docker Daemon Issues
+      # ----------------------------------------
+      - alert: DockerDaemonIssues
+        expr: |
+          sum(rate({service="system", service_name="docker"} |~ "error|failed|unable"[5m])) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+          service: system
+          component: docker
+        annotations:
+          summary: "Docker daemon issues"
+          description: "Errors detected in Docker daemon logs"
+      
+      # ----------------------------------------
+      # Systemd Service Failures
+      # ----------------------------------------
+      - alert: SystemdServiceFailures
+        expr: |
+          sum(rate({job="journald", level=~"err|error"}[5m])) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "Systemd service failures"
+          description: "System services reporting errors"
+
+  # ============================================
+  # Cost & Performance Alerts
+  # ============================================
+  - name: cost-performance-alerts
+    interval: 5m
+    rules:
+      # ----------------------------------------
+      # Log Volume Spike (Cost Control)
+      # ----------------------------------------
+      - alert: LogVolumeSpike
+        expr: |
+          sum(bytes_rate({}[5m])) > 104857600
+        for: 10m
+        labels:
+          severity: warning
+          type: cost
+        annotations:
+          summary: "Log volume spike detected"
+          description: "Log ingestion > 100MB/s - check for log spam"
+      
+      # ----------------------------------------
+      # High Log Error Ratio
+      # ----------------------------------------
+      - alert: HighErrorLogRatio
+        expr: |
+          (
+            sum(rate({level="error"}[5m]))
+            /
+            sum(rate({}[5m]))
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          type: quality
+        annotations:
+          summary: "High error log ratio"
+          description: "> 10% of logs are errors - check system health"

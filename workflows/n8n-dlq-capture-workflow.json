@@ -1,0 +1,315 @@
+{
+  "name": "DLQ Capture - Form Submission Failures",
+  "description": "Captures failed form submissions to Dead Letter Queue for retry processing. Triggers on workflow errors or manual invocation.",
+  "version": "1.0.0",
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "triggerCount": 0,
+  "tags": ["dlq", "error-handling", "form-submission"],
+  "nodes": [
+    {
+      "parameters": {
+        "errorWorkflow": "={{ $workflow.id }}"
+      },
+      "id": "trigger-error-001",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dlq-capture",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-dlq-002",
+      "name": "DLQ Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 500],
+      "webhookId": "dlq-capture-manual"
+    },
+    {
+      "parameters": {
+        "jsCode": "// DLQ Entry Creation and Error Categorization\nconst input = $input.first().json;\n\n// Determine if triggered by error or manual webhook\nconst isErrorTrigger = input.execution?.error !== undefined;\n\n// Extract error context\nfunction extractErrorContext(input) {\n  if (isErrorTrigger) {\n    return {\n      executionId: input.execution?.id || $execution.id,\n      errorMessage: input.execution?.error?.message || 'Unknown error',\n      errorStack: input.execution?.error?.stack,\n      failedNode: input.execution?.lastNodeExecuted || 'Unknown',\n      originalPayload: input.execution?.data || input,\n      httpStatusCode: input.execution?.error?.response?.statusCode\n    };\n  } else {\n    // Manual webhook invocation\n    return {\n      executionId: input.executionId || $execution.id,\n      errorMessage: input.errorMessage || input.message || 'Manual DLQ entry',\n      errorStack: input.errorStack,\n      failedNode: input.failedNode || 'Manual',\n      originalPayload: input.payload || input,\n      httpStatusCode: input.httpStatusCode\n    };\n  }\n}\n\n// Categorize error based on message and status code\nfunction categorizeError(errorMsg, statusCode) {\n  const msg = (errorMsg || '').toLowerCase();\n  const code = parseInt(statusCode) || 0;\n  \n  // Rate limit detection\n  if (code === 429 || msg.includes('rate limit') || msg.includes('too many requests')) {\n    return 'RATE_LIMIT';\n  }\n  \n  // Authentication failures\n  if (code === 401 || code === 403 || msg.includes('unauthorized') || msg.includes('forbidden') || msg.includes('auth')) {\n    return 'AUTHENTICATION';\n  }\n  \n  // Validation errors\n  if (code === 400 || code === 422 || msg.includes('validation') || msg.includes('invalid') || msg.includes('required field')) {\n    return 'VALIDATION';\n  }\n  \n  // Not found - permanent\n  if (code === 404 || msg.includes('not found')) {\n    return 'PERMANENT';\n  }\n  \n  // Service unavailable - dependency\n  if (code === 503 || code === 502 || code === 504 || msg.includes('unavailable') || msg.includes('service down')) {\n    return 'DEPENDENCY';\n  }\n  \n  // Network errors\n  if (msg.includes('timeout') || msg.includes('econnreset') || msg.includes('etimedout') || msg.includes('enotfound') || msg.includes('connection')) {\n    return 'NETWORK';\n  }\n  \n  // Transient errors\n  if (msg.includes('temporary') || msg.includes('retry') || msg.includes('busy') || code === 429) {\n    return 'TRANSIENT';\n  }\n  \n  return 'UNKNOWN';\n}\n\n// Calculate next retry with exponential backoff\nfunction calculateNextRetry(retryCount, category) {\n  const baseDelay = category === 'RATE_LIMIT' ? 10 : 5; // minutes\n  const maxDelay = 120; // 2 hours cap\n  const multiplier = Math.pow(2, retryCount);\n  const jitter = Math.floor(Math.random() * 60) - 30; // ±30 seconds\n  \n  const delayMinutes = Math.min(baseDelay * multiplier, maxDelay);\n  const nextRetry = new Date(Date.now() + (delayMinutes * 60 + jitter) * 1000);\n  \n  return {\n    delayMinutes,\n    nextRetryAt: nextRetry.toISOString()\n  };\n}\n\n// Determine initial status based on category\nfunction determineInitialStatus(category, retryCount) {\n  const immediatePoisonCategories = ['VALIDATION', 'PERMANENT'];\n  if (immediatePoisonCategories.includes(category)) {\n    return 'PERMANENT_FAILURE';\n  }\n  if (retryCount >= 5) {\n    return 'PERMANENT_FAILURE';\n  }\n  return 'PENDING_RETRY';\n}\n\n// Extract form type from payload\nfunction extractFormType(payload) {\n  const body = payload?.body || payload?.data || payload;\n  return body?.formType || body?.form_type || 'consultation';\n}\n\n// Extract source info\nfunction extractSourceInfo(payload) {\n  const headers = payload?.headers || {};\n  return {\n    sourceIp: headers['x-forwarded-for'] || headers['x-real-ip'] || null,\n    userAgent: headers['user-agent'] || null\n  };\n}\n\nconst errorCtx = extractErrorContext(input);\nconst category = categorizeError(errorCtx.errorMessage, errorCtx.httpStatusCode);\nconst retryCount = input.retryCount || 0;\nconst retryInfo = calculateNextRetry(retryCount, category);\nconst status = determineInitialStatus(category, retryCount);\nconst sourceInfo = extractSourceInfo(errorCtx.originalPayload);\nconst formType = extractFormType(errorCtx.originalPayload);\n\n// Build DLQ entry\nconst dlqEntry = {\n  execution_id: errorCtx.executionId,\n  original_payload: errorCtx.originalPayload,\n  error_message: errorCtx.errorMessage.substring(0, 1000), // Limit length\n  error_stack: errorCtx.errorStack?.substring(0, 2000),\n  error_category: category,\n  failed_node: errorCtx.failedNode,\n  http_status_code: errorCtx.httpStatusCode,\n  status: status,\n  retry_count: retryCount,\n  max_retries: 5,\n  next_retry_at: status === 'PENDING_RETRY' ? retryInfo.nextRetryAt : null,\n  source_ip: sourceInfo.sourceIp,\n  user_agent: sourceInfo.userAgent,\n  form_type: formType,\n  workflow_version: '1.0.0',\n  environment: $env.ENVIRONMENT || 'production',\n  n8n_instance_id: $env.N8N_INSTANCE_ID || 'default',\n  retry_history: [{\n    attempt_number: 0,\n    attempted_at: new Date().toISOString(),\n    result: 'failed',\n    error: errorCtx.errorMessage,\n    node: errorCtx.failedNode\n  }]\n};\n\nreturn [{ json: dlqEntry }];"
+      },
+      "id": "extract-context-003",
+      "name": "Extract Error Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "form_submission_dlq",
+        "columns": {
+          "mapping": [
+            { "column": "execution_id", "value": "={{ $json.execution_id }}" },
+            { "column": "original_payload", "value": "={{ JSON.stringify($json.original_payload) }}" },
+            { "column": "error_message", "value": "={{ $json.error_message }}" },
+            { "column": "error_stack", "value": "={{ $json.error_stack }}" },
+            { "column": "error_category", "value": "={{ $json.error_category }}" },
+            { "column": "failed_node", "value": "={{ $json.failed_node }}" },
+            { "column": "http_status_code", "value": "={{ $json.http_status_code }}" },
+            { "column": "status", "value": "={{ $json.status }}" },
+            { "column": "retry_count", "value": "={{ $json.retry_count }}" },
+            { "column": "max_retries", "value": "={{ $json.max_retries }}" },
+            { "column": "next_retry_at", "value": "={{ $json.next_retry_at }}" },
+            { "column": "source_ip", "value": "={{ $json.source_ip }}" },
+            { "column": "user_agent", "value": "={{ $json.user_agent }}" },
+            { "column": "form_type", "value": "={{ $json.form_type }}" },
+            { "column": "workflow_version", "value": "={{ $json.workflow_version }}" },
+            { "column": "environment", "value": "={{ $json.environment }}" },
+            { "column": "n8n_instance_id", "value": "={{ $json.n8n_instance_id }}" }
+          ]
+        }
+      },
+      "id": "insert-postgres-004",
+      "name": "Insert to PostgreSQL DLQ",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [650, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-dlq",
+          "name": "PostgreSQL DLQ"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format data for Google Sheets backup\nconst dlq = $input.first().json;\nconst payload = dlq.original_payload?.body || dlq.original_payload?.data || dlq.original_payload || {};\nconst data = payload.data || payload;\n\n// Format timestamp for readability\nconst formatTime = (iso) => {\n  if (!iso) return 'N/A';\n  try {\n    return new Date(iso).toLocaleString('en-US', {\n      month: 'short',\n      day: 'numeric',\n      hour: '2-digit',\n      minute: '2-digit'\n    });\n  } catch {\n    return iso;\n  }\n};\n\n// Truncate long messages\nconst truncate = (str, len) => {\n  if (!str) return 'N/A';\n  return str.length > len ? str.substring(0, len) + '...' : str;\n};\n\nreturn [{\n  json: {\n    Timestamp: new Date().toISOString(),\n    Execution_ID: truncate(dlq.execution_id, 20),\n    Email: data.email || data.Email || 'N/A',\n    Company: data.company || data.Company || data.organization || 'N/A',\n    Name: data.name || (data.firstName && data.lastName ? `${data.firstName} ${data.lastName}` : 'N/A'),\n    Error_Category: dlq.error_category,\n    Error_Message: truncate(dlq.error_message, 150),\n    Failed_Node: dlq.failed_node || 'N/A',\n    Retry_Count: `${dlq.retry_count}/${dlq.max_retries}`,\n    Status: dlq.status,\n    Next_Retry: formatTime(dlq.next_retry_at),\n    Form_Type: dlq.form_type\n  }\n}];"
+      },
+      "id": "format-sheets-005",
+      "name": "Format for Google Sheets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": "={{ $env.DLQ_SHEET_ID }}",
+        "sheetName": "Failed Submissions",
+        "columns": {
+          "mapping": [
+            { "column": "Timestamp", "value": "={{ $json.Timestamp }}" },
+            { "column": "Execution_ID", "value": "={{ $json.Execution_ID }}" },
+            { "column": "Email", "value": "={{ $json.Email }}" },
+            { "column": "Company", "value": "={{ $json.Company }}" },
+            { "column": "Name", "value": "={{ $json.Name }}" },
+            { "column": "Error_Category", "value": "={{ $json.Error_Category }}" },
+            { "column": "Error_Message", "value": "={{ $json.Error_Message }}" },
+            { "column": "Failed_Node", "value": "={{ $json.Failed_Node }}" },
+            { "column": "Retry_Count", "value": "={{ $json.Retry_Count }}" },
+            { "column": "Status", "value": "={{ $json.Status }}" },
+            { "column": "Next_Retry", "value": "={{ $json.Next_Retry }}" },
+            { "column": "Form_Type", "value": "={{ $json.Form_Type }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "append-sheets-006",
+      "name": "Append to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1050, 200],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-dlq",
+          "name": "Google Sheets DLQ"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "channel": "={{ $env.DLQ_ALERT_CHANNEL || '#form-submission-alerts' }}",
+        "text": "=:warning: *Form Submission Failed*\n\n*Execution:* `{{ $json.execution_id }}`\n*Category:* {{ $json.error_category }}\n*Form Type:* {{ $json.form_type }}\n*Failed Node:* {{ $json.failed_node || 'N/A' }}\n\n*Error:* {{ $json.error_message.substring(0, 200) }}\n\n*Retry:* {{ $json.retry_count }}/{{ $json.max_retries }}\n*Status:* {{ $json.status }}\n*Next Retry:* {{ $json.next_retry_at ? new Date($json.next_retry_at).toLocaleString() : 'Manual intervention required' }}",
+        "options": {}
+      },
+      "id": "slack-alert-007",
+      "name": "Send Slack Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [850, 400],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-alerts",
+          "name": "Slack Alerts"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"DLQ entry created successfully\",\n  \"data\": {\n    \"execution_id\": \"{{ $json.execution_id }}\",\n    \"error_category\": \"{{ $json.error_category }}\",\n    \"status\": \"{{ $json.status }}\",\n    \"next_retry_at\": \"{{ $json.next_retry_at }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "success-response-008",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1050, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"message\": \"Failed to create DLQ entry\",\n  \"error\": \"{{ $json.message || 'Database error' }}\"\n}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "error-response-009",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [850, 600]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-permanent-failure",
+              "leftValue": "={{ $json.error_category }}",
+              "rightValue": "PERMANENT",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        }
+      },
+      "id": "is-permanent-010",
+      "name": "Is Permanent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [650, 500]
+    },
+    {
+      "parameters": {
+        "channel": "={{ $env.DLQ_ALERT_CHANNEL || '#form-submission-alerts' }}",
+        "text": "=:x: *PERMANENT FAILURE - Immediate Attention Required*\n\n*Execution:* `{{ $json.execution_id }}`\n*Category:* {{ $json.error_category }}\n*Form Type:* {{ $json.form_type }}\n\n*Error:* {{ $json.error_message.substring(0, 300) }}\n\nThis submission has been classified as a permanent failure and will not be retried automatically.\nPlease review the DLQ for manual intervention.",
+        "options": {}
+      },
+      "id": "slack-permanent-011",
+      "name": "Alert Permanent Failure",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [850, 700],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-alerts",
+          "name": "Slack Alerts"
+        }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Error Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DLQ Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Error Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Error Context": {
+      "main": [
+        [
+          {
+            "node": "Insert to PostgreSQL DLQ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert to PostgreSQL DLQ": {
+      "main": [
+        [
+          {
+            "node": "Format for Google Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Slack Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Is Permanent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format for Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Append to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Permanent?": {
+      "main": [
+        [
+          {
+            "node": "Alert Permanent Failure",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null
+}

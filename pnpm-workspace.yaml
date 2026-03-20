@@ -1,0 +1,4 @@
+packages:
+  - 'zaplit-com'
+  - 'zaplit-org'
+  - 'scripts-ts'

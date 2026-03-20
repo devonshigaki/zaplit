@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.next/
+dist/
+build/
+
+# Generated files
+*.log
+*.lock
+package-lock.json
+pnpm-lock.yaml
+
+# Cache
+.cache/
+*.tsbuildinfo
+
+# Specific files
+.DS_Store
+.env*.local

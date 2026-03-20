@@ -6,22 +6,15 @@
 
 ```bash
 # Install
-cd zaplit-com && pnpm install
+pnpm install
 
 # Dev
-pnpm dev
+pnpm dev:com    # zaplit-com (localhost:3000)
+pnpm dev:org    # zaplit-org (localhost:3001)
 
 # Build
 pnpm build
 ```
-
-## Documentation
-
-- [Architecture](./docs/architecture/)
-- [Operations](./docs/ops/)
-- [Development](./docs/development/)
-- [Security](./docs/security/)
-- [Reference](./docs/reference/)
 
 ## Commands
 
@@ -29,7 +22,7 @@ pnpm build
 |---------|-------------|
 | `pnpm dev:com` | Dev server (zaplit-com) |
 | `pnpm dev:org` | Dev server (zaplit-org) |
-| `pnpm build` | Build both |
+| `pnpm build` | Build both apps |
 | `pnpm typecheck` | TypeScript check |
 | `pnpm lint` | Lint + Prettier |
 | `pnpm test` | Unit tests |
@@ -37,12 +30,20 @@ pnpm build
 | `pnpm deploy:com` | Deploy zaplit-com |
 | `pnpm deploy:org` | Deploy zaplit-org |
 
-## Tech Stack
+## Stack
 
 - Next.js 16 + React 19
 - TypeScript 5.7 (Strict)
 - Tailwind CSS 4
 - Google Cloud Run
+
+## Docs
+
+- [Architecture](./docs/architecture/)
+- [Operations](./docs/ops/)
+- [Development](./docs/development/)
+- [Security](./docs/security/)
+- [Reference](./docs/reference/)
 
 ## License
 

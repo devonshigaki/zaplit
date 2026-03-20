@@ -1,0 +1,471 @@
+{
+  "name": "Consultation Form to CRM - v4 Parallel Optimized",
+  "description": "Production-ready parallel workflow with Person+Company parallel creation, HTTP Keep-Alive, and comprehensive error handling. Target: <3s P95 latency.",
+  "version": "4.0.0",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "consultation-v4",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "X-Workflow-Version",
+                "value": "v4-parallel"
+              },
+              {
+                "name": "X-Request-ID",
+                "value": "={{ $execution.id }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "webhook-entry-001",
+      "name": "Consultation Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "consultation-form-v4"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Entry Validation Node - Validates and sanitizes form data\nconst body = $input.first().json.body;\nconst result = { valid: true, errors: [], warnings: [], normalized: {}, original: body, _meta: { receivedAt: new Date().toISOString() } };\n\nconst validateEmail = (email) => {\n  if (!email || typeof email !== 'string') return { valid: false, reason: 'Email is required' };\n  const trimmed = email.trim().toLowerCase();\n  if (trimmed.length === 0) return { valid: false, reason: 'Email is empty' };\n  if (trimmed.length > 254) return { valid: false, reason: 'Email too long' };\n  if (!trimmed.includes('@')) return { valid: false, reason: 'Missing @ symbol' };\n  const [local, domain] = trimmed.split('@');\n  if (!local || local.length === 0) return { valid: false, reason: 'Local part empty' };\n  if (local.length > 64) return { valid: false, reason: 'Local part too long' };\n  if (local.startsWith('.') || local.endsWith('.')) return { valid: false, reason: 'Local part cannot start/end with dot' };\n  if (local.includes('..')) return { valid: false, reason: 'Consecutive dots in local part' };\n  if (!domain || domain.length === 0) return { valid: false, reason: 'Domain empty' };\n  if (!domain.includes('.')) return { valid: false, reason: 'Missing TLD' };\n  const tld = domain.substring(domain.lastIndexOf('.') + 1);\n  if (tld.length < 2) return { valid: false, reason: 'TLD too short' };\n  const emailRegex = /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/;\n  if (!emailRegex.test(trimmed)) return { valid: false, reason: 'Invalid email format' };\n  return { valid: true, normalized: trimmed };\n};\n\nconst parseFullName = (fullName) => {\n  if (!fullName || typeof fullName !== 'string') return { firstName: 'Unknown', lastName: '' };\n  const clean = fullName.trim().replace(/\\s+/g, ' ');\n  if (clean.length === 0) return { firstName: 'Unknown', lastName: '' };\n  const parts = clean.split(' ');\n  return {\n    firstName: parts[0],\n    lastName: parts.slice(1).join(' ')\n  };\n};\n\n// Email validation\nconst emailValidation = validateEmail(body.data?.email);\nif (!emailValidation.valid) {\n  result.valid = false;\n  result.errors.push(`Email: ${emailValidation.reason}`);\n} else {\n  result.normalized.email = emailValidation.normalized;\n}\n\n// Name parsing\nconst nameParts = parseFullName(body.data?.name);\nresult.normalized.firstName = nameParts.firstName;\nresult.normalized.lastName = nameParts.lastName;\n\n// Company validation\nconst company = body.data?.company?.trim();\nif (!company) {\n  result.warnings.push('Company name not provided');\n  result.normalized.company = 'Unknown Company';\n} else {\n  result.normalized.company = company;\n}\n\n// Other fields\nresult.normalized.jobTitle = body.data?.role || body.data?.jobTitle;\nresult.normalized.message = body.data?.message;\nresult.normalized.phone = body.data?.phone;\nresult.normalized.teamSize = body.data?.teamSize;\nresult.normalized.securityLevel = body.data?.securityLevel;\nresult.normalized.techStack = Array.isArray(body.data?.techStack) ? body.data.techStack.join(', ') : body.data?.techStack || '';\nresult.normalized.compliance = Array.isArray(body.data?.compliance) ? body.data.compliance.join(', ') : body.data?.compliance || '';\n\n// Track validation time\nresult._meta.validatedAt = new Date().toISOString();\n\nreturn [{ json: result }];"
+      },
+      "id": "validate-entry-002",
+      "name": "Entry Validation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-valid",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-valid-003",
+      "name": "Is Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare data for parallel branches with error tracking\nconst input = $input.first().json;\nconst data = input.normalized;\n\n// Calculate domain for company\nconst domain = data.email?.split('@')[1] || '';\n\n// Shared note data\nconst noteData = {\n  message: data.message || '',\n  techStack: data.techStack || '',\n  compliance: data.compliance || '',\n  teamSize: data.teamSize || '',\n  securityLevel: data.securityLevel || '',\n  submittedAt: input._meta?.receivedAt || new Date().toISOString()\n};\n\n// Return two outputs for parallel branches\nreturn [\n  {\n    json: {\n      branch: 'person',\n      personData: {\n        name: { firstName: data.firstName, lastName: data.lastName },\n        emails: [{ email: data.email, isPrimary: true }],\n        jobTitle: data.jobTitle || undefined,\n        phones: data.phone ? [{ number: data.phone, isPrimary: true }] : undefined\n      },\n      companyName: data.company,\n      noteData: noteData,\n      _meta: {\n        branchStartTime: Date.now()\n      }\n    }\n  },\n  {\n    json: {\n      branch: 'company',\n      companyData: {\n        name: data.company,\n        domainName: domain || undefined\n      },\n      personEmail: data.email,\n      noteData: noteData,\n      _meta: {\n        branchStartTime: Date.now()\n      }\n    }\n  }\n];"
+      },
+      "id": "prepare-parallel-004",
+      "name": "Prepare Parallel Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CRM_BASE_URL }}/rest/people",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.personData) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "create-person-005",
+      "name": "Create Person",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1050, 150],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "twenty-crm-auth",
+          "name": "Twenty CRM API"
+        }
+      },
+      "continueOnFail": true,
+      "retry": {
+        "limit": 3,
+        "delay": 1000,
+        "backoff": "exponential"
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CRM_BASE_URL }}/rest/companies",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.companyData) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "create-company-006",
+      "name": "Create Company",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1050, 250],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "twenty-crm-auth",
+          "name": "Twenty CRM API"
+        }
+      },
+      "continueOnFail": true,
+      "retry": {
+        "limit": 3,
+        "delay": 1000,
+        "backoff": "exponential"
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract Person ID with error handling\nconst response = $input.first().json;\nconst startTime = $input.first().json._meta?.branchStartTime || Date.now();\nconst duration = Date.now() - startTime;\n\n// Check for HTTP errors\nconst hasError = response.error !== undefined || (response.statusCode && response.statusCode >= 400);\nconst personId = !hasError ? (response.data?.id || response.id) : null;\n\nconst result = {\n  personId: personId,\n  personSuccess: !!personId && !hasError,\n  personError: hasError ? (response.error?.message || response.message || 'Unknown error') : null,\n  personStatusCode: response.statusCode || 200,\n  personDuration: duration,\n  noteData: $input.first().json.noteData,\n  companyName: $input.first().json.companyName,\n  _meta: {\n    extractedAt: Date.now()\n  }\n};\n\n// Log error if present\nif (hasError) {\n  console.error(`[PARALLEL] Person creation failed: ${result.personError}`);\n}\n\nreturn [{ json: result }];"
+      },
+      "id": "extract-person-007",
+      "name": "Extract Person ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 150]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract Company ID with error handling\nconst response = $input.first().json;\nconst startTime = $input.first().json._meta?.branchStartTime || Date.now();\nconst duration = Date.now() - startTime;\n\n// Check for HTTP errors\nconst hasError = response.error !== undefined || (response.statusCode && response.statusCode >= 400);\nconst companyId = !hasError ? (response.data?.id || response.id) : null;\n\nconst result = {\n  companyId: companyId,\n  companySuccess: !!companyId && !hasError,\n  companyError: hasError ? (response.error?.message || response.message || 'Unknown error') : null,\n  companyStatusCode: response.statusCode || 200,\n  companyDuration: duration,\n  noteData: $input.first().json.noteData,\n  _meta: {\n    extractedAt: Date.now()\n  }\n};\n\n// Log error if present\nif (hasError) {\n  console.error(`[PARALLEL] Company creation failed: ${result.companyError}`);\n}\n\nreturn [{ json: result }];"
+      },
+      "id": "extract-company-008",
+      "name": "Extract Company ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 250]
+    },
+    {
+      "parameters": {
+        "mode": "waitForAll"
+      },
+      "id": "merge-ids-009",
+      "name": "Merge Records",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [1450, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine Person and Company results with comprehensive error handling\nconst inputs = $input.all();\nconst personInput = inputs[0].json;\nconst companyInput = inputs[1].json;\n\n// Determine overall success\nconst personSuccess = personInput.personSuccess;\nconst companySuccess = companyInput.companySuccess;\nconst totalFailures = (personSuccess ? 0 : 1) + (companySuccess ? 0 : 1);\n\n// Handle complete failure\nif (totalFailures === 2) {\n  throw new Error(`PARALLEL_FAILURE: Both Person and Company creation failed. Person: ${personInput.personError}, Company: ${companyInput.companyError}`);\n}\n\n// Log partial failure\nif (totalFailures === 1) {\n  console.warn(`[PARALLEL] Partial failure detected. Person success: ${personSuccess}, Company success: ${companySuccess}`);\n}\n\nconst result = {\n  personId: personInput.personId,\n  companyId: companyInput.companyId,\n  personSuccess: personSuccess,\n  companySuccess: companySuccess,\n  personError: personInput.personError,\n  companyError: companyInput.companyError,\n  personDuration: personInput.personDuration,\n  companyDuration: companyInput.companyDuration,\n  partialFailure: totalFailures === 1,\n  noteData: personInput.noteData || companyInput.noteData,\n  _meta: {\n    mergedAt: Date.now(),\n    parallelDuration: Math.max(personInput.personDuration || 0, companyInput.companyDuration || 0)\n  }\n};\n\nreturn [{ json: result }];"
+      },
+      "id": "combine-results-010",
+      "name": "Combine Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 200]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.CRM_BASE_URL }}/rest/people/{{ $json.personId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "={\"companyId\": \"{{ $json.companyId }}\"}",
+        "options": {
+          "timeout": 15000,
+          "ignoreHttpStatusErrors": true
+        }
+      },
+      "id": "link-person-011",
+      "name": "Link Person to Company",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1850, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "twenty-crm-auth",
+          "name": "Twenty CRM API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CRM_BASE_URL }}/rest/notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"title\": \"Consultation Request: {{ $json.noteData.company || 'Unknown' }}\",\n  \"body\": \"Contact: {{ $json.noteData.firstName || '' }} {{ $json.noteData.lastName || '' }}\\nEmail: {{ $json.noteData.email || 'N/A' }}\\n\\nTechnical Details:\\n- Team Size: {{ $json.noteData.teamSize || 'N/A' }}\\n- Tech Stack: {{ $json.noteData.techStack || 'N/A' }}\\n- Security Level: {{ $json.noteData.securityLevel || 'N/A' }}\\n- Compliance: {{ $json.noteData.compliance || 'N/A' }}\\n\\nMessage:\\n{{ $json.noteData.message || 'No message provided' }}\\n\\nSubmitted: {{ $json.noteData.submittedAt || new Date().toISOString() }}\",\n  \"personId\": \"{{ $json.personId }}\",\n  \"companyId\": \"{{ $json.companyId }}\"\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "create-note-012",
+      "name": "Create Note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2050, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "twenty-crm-auth",
+          "name": "Twenty CRM API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Final response assembly with performance metrics\nconst input = $input.first().json;\nconst linkResult = $input.first().json;\nconst noteResult = items[0]?.json || {};\n\n// Calculate total workflow duration\nconst workflowStart = $execution.startTime;\nconst totalDuration = Date.now() - new Date(workflowStart).getTime();\n\nconst response = {\n  success: true,\n  message: input.partialFailure \n    ? 'Submission processed with partial success. Our team will review any missing information.' \n    : 'Thank you for your submission! We\\'ll be in touch soon.',\n  data: {\n    personId: input.personId,\n    companyId: input.companyId,\n    personCreated: input.personSuccess,\n    companyCreated: input.companySuccess,\n    partialFailure: input.partialFailure || false,\n    errors: input.partialFailure ? {\n      person: input.personError,\n      company: input.companyError\n    } : undefined\n  },\n  performance: {\n    totalDurationMs: totalDuration,\n    parallelDurationMs: input._meta?.parallelDuration,\n    personDurationMs: input.personDuration,\n    companyDurationMs: input.companyDuration\n  },\n  requestId: $execution.id\n};\n\nreturn [{ json: response }];"
+      },
+      "id": "assemble-response-013",
+      "name": "Assemble Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2250, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "success-response-014",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2450, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"message\": \"Validation failed. Please check your input.\",\n  \"errors\": {{ JSON.stringify($json.errors) }},\n  \"code\": \"VALIDATION_ERROR\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "validation-error-015",
+      "name": "Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [850, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"message\": \"An error occurred while processing your submission. Please try again later.\",\n  \"error\": {{ JSON.stringify($json.error?.message || $json.message || 'Unknown error') }},\n  \"requestId\": \"{{ $execution.id }}\",\n  \"code\": \"PROCESSING_ERROR\"\n}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "error-response-016",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1650, 500]
+    }
+  ],
+  "connections": {
+    "Consultation Webhook": {
+      "main": [
+        [
+          {
+            "node": "Entry Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entry Validation": {
+      "main": [
+        [
+          {
+            "node": "Is Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Parallel Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Parallel Data": {
+      "main": [
+        [
+          {
+            "node": "Create Person",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Person": {
+      "main": [
+        [
+          {
+            "node": "Extract Person ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Company": {
+      "main": [
+        [
+          {
+            "node": "Extract Company ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Person ID": {
+      "main": [
+        [
+          {
+            "node": "Merge Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Company ID": {
+      "main": [
+        [
+          {
+            "node": "Merge Records",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Records": {
+      "main": [
+        [
+          {
+            "node": "Combine Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Results": {
+      "main": [
+        [
+          {
+            "node": "Link Person to Company",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Link Person to Company": {
+      "main": [
+        [
+          {
+            "node": "Create Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Note": {
+      "main": [
+        [
+          {
+            "node": "Assemble Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assemble Response": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "",
+    "timezone": "America/Los_Angeles"
+  },
+  "staticData": null,
+  "tags": ["production", "consultation-form", "v4", "parallel", "optimized"],
+  "variables": [
+    {
+      "name": "CRM_BASE_URL",
+      "value": "https://crm.zaplit.com"
+    }
+  ]
+}

@@ -1,0 +1,256 @@
+# Promtail Configuration for n8n + Twenty CRM
+# Ships logs to Grafana Cloud Loki
+# 
+# Environment variables required:
+#   GRAFANA_CLOUD_LOKI_HOST - Loki endpoint (e.g., logs-prod-us-central1.grafana.net)
+#   GRAFANA_CLOUD_LOKI_USER - Loki user ID
+#   GRAFANA_CLOUD_API_KEY   - Grafana Cloud API key
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: info
+
+positions:
+  filename: /var/lib/promtail/positions.yaml
+  sync_period: 10s
+
+clients:
+  - url: https://${GRAFANA_CLOUD_LOKI_HOST}/loki/api/v1/push
+    basic_auth:
+      username: ${GRAFANA_CLOUD_LOKI_USER}
+      password: ${GRAFANA_CLOUD_API_KEY}
+    
+    # Batch settings for efficiency
+    batchwait: 1s
+    batchsize: 102400
+    
+    # Timeout configuration
+    timeout: 10s
+    
+    # Retry with exponential backoff
+    backoff_config:
+      min_period: 100ms
+      max_period: 5s
+      max_retries: 10
+    
+    # External labels applied to all logs
+    external_labels:
+      cluster: zaplit-prod
+      region: us-central1
+      environment: production
+
+scrape_configs:
+  # ============================================
+  # n8n Container Logs
+  # ============================================
+  - job_name: n8n-containers
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: n8n
+          service: n8n
+          __path__: /var/lib/docker/containers/*/*-json.log
+    
+    pipeline_stages:
+      # Parse Docker JSON logs
+      - json:
+          expressions:
+            log: log
+            stream: stream
+            timestamp: time
+      
+      # Set the timestamp from the log
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+      
+      # Parse n8n log format (if structured JSON)
+      - json:
+          source: log
+          expressions:
+            level: level
+            workflow_id: workflowId
+            workflow_name: workflowName
+            execution_id: executionId
+            message: msg
+            error: err
+            node: node
+      
+      # Add level label from parsed log
+      - labels:
+          level:
+          workflow_name:
+      
+      # Clean up the output line
+      - output:
+          source: log
+      
+      # Drop debug logs in production (optional - remove if debug needed)
+      # - drop:
+      #     source: level
+      #     value: debug
+      #     drop_counter_reason: debug_logs_filtered
+
+  # ============================================
+  # Twenty CRM Container Logs
+  # ============================================
+  - job_name: twenty-crm-containers
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: twenty-crm
+          service: twenty-crm
+          __path__: /var/lib/docker/containers/*twenty*/*-json.log
+    
+    pipeline_stages:
+      - json:
+          expressions:
+            log: log
+            stream: stream
+            timestamp: time
+      
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+      
+      # Try to parse structured logs
+      - json:
+          source: log
+          expressions:
+            level: level
+            message: message
+            timestamp: timestamp
+      
+      - labels:
+          level:
+      
+      - output:
+          source: log
+
+  # ============================================
+  # Nginx Access Logs
+  # ============================================
+  - job_name: nginx-access
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          service: nginx
+          log_type: access
+          __path__: /var/log/nginx/access.log
+    
+    pipeline_stages:
+      # Parse nginx combined log format
+      - regex:
+          expression: '^(?P<remote_addr>\S+) - (?P<remote_user>\S+) \[(?P<time_local>[^\]]+)\] "(?P<method>\S+) (?P<path>\S+) (?P<protocol>\S+)" (?P<status>\d{3}) (?P<body_bytes_sent>\d+) "(?P<http_referer>[^"]+)" "(?P<http_user_agent>[^"]+)"'
+      
+      - timestamp:
+          source: time_local
+          format: "02/Jan/2006:15:04:05 -0700"
+      
+      - labels:
+          status:
+          method:
+      
+      - output:
+          source: path
+
+  # ============================================
+  # Nginx Error Logs
+  # ============================================
+  - job_name: nginx-error
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          service: nginx
+          log_type: error
+          __path__: /var/log/nginx/error.log
+    
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<time>\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}) \[(?P<level>\w+)\] (?P<pid>\d+)#(?P<tid>\d+): (?P<message>.*)$'
+      
+      - timestamp:
+          source: time
+          format: "2006/01/02 15:04:05"
+      
+      - labels:
+          level:
+      
+      - output:
+          source: message
+
+  # ============================================
+  # System Logs
+  # ============================================
+  - job_name: system-syslog
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: system
+          service: system
+          __path__: /var/log/syslog
+    
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\w{3}\s+\d{1,2} \d{2}:\d{2}:\d{2}) (?P<hostname>\S+) (?P<service_name>\S+): (?P<message>.*)$'
+      
+      - timestamp:
+          source: timestamp
+          format: "Jan 2 15:04:05"
+      
+      - labels:
+          service_name:
+      
+      - output:
+          source: message
+
+  # ============================================
+  # System Auth Logs
+  # ============================================
+  - job_name: system-auth
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: system
+          service: auth
+          __path__: /var/log/auth.log
+    
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\w{3}\s+\d{1,2} \d{2}:\d{2}:\d{2}) (?P<hostname>\S+) (?P<service_name>\S+): (?P<message>.*)$'
+      
+      - timestamp:
+          source: timestamp
+          format: "Jan 2 15:04:05"
+      
+      - labels:
+          service_name:
+
+  # ============================================
+  # Journald (systemd services)
+  # ============================================
+  - job_name: journald
+    journal:
+      max_age: 12h
+      labels:
+        job: journald
+        service: systemd
+    
+    relabel_configs:
+      - source_labels: ['__journal__systemd_unit']
+        target_label: unit
+      - source_labels: ['__journal__hostname']
+        target_label: hostname
+      - source_labels: ['__journal_priority']
+        target_label: level
+      - source_labels: ['__journal_syslog_identifier']
+        target_label: syslog_identifier

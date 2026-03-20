@@ -1,0 +1,192 @@
+- generic [ref=e3]:
+  - main [ref=e4]:
+    - generic [ref=e405]:
+      - generic [ref=e408]:
+        - generic [ref=e410]:
+          - generic [ref=e413]:
+            - link "Personal" [ref=e415] [cursor=pointer]:
+              - /url: /projects/Oy2TRFMRL2ksHQXh
+              - generic [ref=e417]:
+                - generic "Personal" [ref=e418]:
+                  - img [ref=e419]
+                - generic "Personal" [ref=e423]
+            - generic [ref=e424]: /
+            - generic "Consultation Form to CRM" [ref=e425]:
+              - generic [ref=e427] [cursor=pointer]: Consultation Form to CRM
+          - generic [ref=e429]: + Add tag
+          - generic [ref=e433]:
+            - generic [ref=e435]:
+              - button "Publish" [ref=e2549] [cursor=pointer]:
+                - generic [ref=e441]: Publish
+              - button "More actions" [ref=e444] [cursor=pointer]:
+                - img [ref=e446]
+            - link "Version History" [ref=e2550] [cursor=pointer]:
+              - /url: /workflow/129F205D-3954-4E94-AFB7-4746F4C8D83A/history
+              - button "Version History" [ref=e2551]:
+                - img [ref=e2553]
+            - button "Actions" [ref=e459] [cursor=pointer]:
+              - img [ref=e461]
+        - radiogroup [ref=e471]:
+          - radio "Editor" [checked] [ref=e472]:
+            - generic [ref=e473] [cursor=pointer]: Editor
+          - radio "Executions" [ref=e474]:
+            - generic [ref=e475] [cursor=pointer]: Executions
+          - radio "Evaluations" [ref=e476]:
+            - generic [ref=e477] [cursor=pointer]: Evaluations
+      - complementary [ref=e478]:
+        - generic [ref=e479]:
+          - generic [ref=e481]:
+            - link [ref=e482] [cursor=pointer]:
+              - /url: /home
+              - generic [ref=e483]:
+                - img [ref=e484]
+                - img [ref=e486]
+            - menubar [ref=e489]:
+              - menuitem "Add new item" [ref=e490]:
+                - button "Add new item" [ref=e492] [cursor=pointer]:
+                  - img [ref=e494]
+            - button "Open command palette" [ref=e497] [cursor=pointer]:
+              - img [ref=e499]
+            - button "Toggle sidebar" [ref=e504] [cursor=pointer]:
+              - img [ref=e506]
+          - generic [ref=e514]:
+            - menuitem "Overview" [ref=e516] [cursor=pointer]:
+              - img [ref=e518]
+              - generic [ref=e523]: Overview
+            - menuitem "Chat" [ref=e525] [cursor=pointer]:
+              - img [ref=e527]
+              - generic [ref=e529]:
+                - generic [ref=e530]: Chat
+                - generic [ref=e531]: beta
+          - generic [ref=e533]:
+            - menuitem "Templates" [ref=e535] [cursor=pointer]:
+              - img [ref=e537]
+              - generic [ref=e543]: Templates
+            - menuitem "Insights" [ref=e545] [cursor=pointer]:
+              - img [ref=e547]
+              - generic [ref=e550]: Insights
+            - menuitem "Help" [ref=e552] [cursor=pointer]:
+              - img [ref=e554]
+              - generic [ref=e559]: Help
+              - img [ref=e560]
+            - menuitem "Settings" [ref=e563] [cursor=pointer]:
+              - img [ref=e565]
+              - generic [ref=e570]: Settings
+              - img [ref=e571]
+      - main [ref=e573]:
+        - generic [ref=e576]:
+          - generic [ref=e578]:
+            - generic [ref=e580]:
+              - generic:
+                - img
+                - img:
+                  - group "Edge from ED6E0A75-011D-4066-8BC9-2C6569A3C8E0 to 2747FDC4-C12A-4E52-AAB7-22848D30BFF7":
+                    - img
+                - img:
+                  - group "Edge from ED6E0A75-011D-4066-8BC9-2C6569A3C8E0 to e38c4ac7-51ca-4951-9559-058240c3c8c6" [ref=e1149] [cursor=pointer]:
+                    - img
+                - generic:
+                  - group [ref=e581] [cursor=pointer]:
+                    - generic [ref=e582]:
+                      - generic [ref=e585]: POST
+                      - generic [ref=e588]:
+                        - button "Execute step" [disabled] [ref=e589]:
+                          - img [ref=e591]
+                        - button "Deactivate" [ref=e593]:
+                          - img [ref=e595]
+                        - button "Delete" [ref=e598]:
+                          - img [ref=e600]
+                        - button "More actions" [ref=e602]:
+                          - img [ref=e604]
+                      - generic [ref=e606]:
+                        - generic [ref=e609]:
+                          - img
+                        - generic:
+                          - generic: Consultation Webhook
+                      - generic:
+                        - generic:
+                          - generic:
+                            - img
+                          - button "Execute workflow" [disabled] [ref=e808]:
+                            - generic [ref=e809]:
+                              - img [ref=e810]
+                              - generic [ref=e812]: Execute workflow
+                  - group [ref=e610] [cursor=pointer]:
+                    - generic [ref=e611]:
+                      - img [ref=e617]
+                      - generic [ref=e625]:
+                        - button "Execute step" [disabled] [ref=e626]:
+                          - img [ref=e628]
+                        - button "Deactivate" [ref=e630]:
+                          - img [ref=e632]
+                        - button "Delete" [ref=e635]:
+                          - img [ref=e637]
+                        - button "More actions" [ref=e639]:
+                          - img [ref=e641]
+                      - generic [ref=e643]:
+                        - generic [ref=e646]:
+                          - img
+                        - generic:
+                          - generic: Success Response
+                  - group [ref=e1153] [cursor=pointer]:
+                    - generic [ref=e1154]:
+                      - img [ref=e1160]
+                      - generic [ref=e1168]:
+                        - button "Execute step" [disabled] [ref=e1169]:
+                          - img [ref=e1171]
+                        - button "Deactivate" [ref=e1173]:
+                          - img [ref=e1175]
+                        - button "Delete" [ref=e1178]:
+                          - img [ref=e1180]
+                        - button "More actions" [ref=e1182]:
+                          - img [ref=e1184]
+                      - generic [ref=e1186]:
+                        - generic [ref=e1189]:
+                          - img
+                        - generic:
+                          - generic: HTTP Request
+                          - generic: "POST: https://crm.zaplit.com/rest/people"
+            - img [ref=e647]
+            - img [ref=e648]
+            - generic [ref=e650]:
+              - button "Zoom to Fit" [ref=e652] [cursor=pointer]:
+                - img [ref=e654]
+              - button "Zoom In" [ref=e657] [cursor=pointer]:
+                - img [ref=e659]
+              - button "Zoom Out" [ref=e664] [cursor=pointer]:
+                - img [ref=e666]
+              - button "Tidy Up" [ref=e671] [cursor=pointer]:
+                - img [ref=e673]
+          - generic [ref=e675]:
+            - generic [ref=e676]:
+              - generic:
+                - button "Execute workflow" [disabled]:
+                  - generic:
+                    - generic:
+                      - img
+                  - generic:
+                    - generic: Waiting for trigger event
+            - button "Stop waiting for webhook call" [ref=e2545] [cursor=pointer]:
+              - img [ref=e2547]
+          - generic:
+            - complementary
+            - complementary [ref=e2558]:
+              - paragraph [ref=e2561]: What happens next?
+              - generic [ref=e2562]:
+                - img [ref=e2564]
+                - textbox "Search nodes..." [active] [ref=e2569]: http request
+                - img [ref=e2679] [cursor=pointer]
+              - generic [ref=e2686] [cursor=pointer]:
+                - generic [ref=e2690]:
+                  - img
+                - generic [ref=e2691]:
+                  - generic [ref=e2693]: HTTP Request
+                  - paragraph [ref=e2694]: Makes an HTTP request and returns the response data
+        - generic [ref=e718] [cursor=pointer]:
+          - generic [ref=e719]: Logs
+          - generic [ref=e721]:
+            - button "Pop out panel" [ref=e723]:
+              - img [ref=e725]
+            - button "Open panel" [ref=e728]:
+              - img [ref=e730]
+  - complementary

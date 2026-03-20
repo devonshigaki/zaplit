@@ -1,0 +1,294 @@
+# Alert Rules for Loki Log-Based Alerting
+# Import these into Grafana Cloud Alerting
+
+groups:
+  - name: n8n-log-alerts
+    interval: 1m
+    rules:
+      # ============================================
+      # High Error Rate Alert
+      # ============================================
+      - alert: N8nHighErrorRate
+        expr: |
+          sum(rate({service="n8n", level="error"}[5m])) 
+          / 
+          sum(rate({service="n8n"}[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          service: n8n
+          team: platform
+        annotations:
+          summary: "n8n error rate is high"
+          description: "Error rate is {{ $value | humanizePercentage }} for the last 5 minutes"
+          runbook_url: "https://wiki.internal/runbooks/n8n-high-error-rate"
+          dashboard_url: "https://grafana.zaplit.com/d/n8n-logs"
+      
+      # ============================================
+      # Webhook Failures
+      # ============================================
+      - alert: N8nWebhookFailures
+        expr: |
+          sum(rate({service="n8n"} 
+            |= "webhook" 
+            |~ "failed|error|timeout" [5m]
+          )) > 0.1
+        for: 1m
+        labels:
+          severity: critical
+          service: n8n
+          component: webhook
+        annotations:
+          summary: "Webhook processing failures detected"
+          description: "{{ $value }} webhook failures per second"
+      
+      # ============================================
+      # CRM Integration Failures
+      # ============================================
+      - alert: CRMIntegrationFailures
+        expr: |
+          sum(rate({service="n8n"} 
+            | json 
+            | msg=~"CRM.*(failed|error|timeout)" [5m]
+          )) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          service: n8n
+          integration: twenty-crm
+        annotations:
+          summary: "CRM integration experiencing issues"
+          description: "{{ $value }} CRM failures per second"
+      
+      # ============================================
+      # Unusual Log Volume (Possible Attack)
+      # ============================================
+      - alert: UnusualLogVolume
+        expr: |
+          (
+            sum(rate({service="n8n"}[5m])) 
+            > 
+            2 * avg_over_time(sum(rate({service="n8n"}[5m]))[1h:5m])
+          )
+        for: 5m
+        labels:
+          severity: warning
+          service: n8n
+          type: anomaly
+        annotations:
+          summary: "Unusual log volume detected"
+          description: "Log volume is 2x higher than 1h average"
+      
+      # ============================================
+      # Database Connection Errors
+      # ============================================
+      - alert: DatabaseConnectionErrors
+        expr: |
+          sum(rate({service="n8n"} 
+            |~ "ECONNREFUSED|connection.*refused|database.*unavailable" [5m]
+          )) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: n8n
+          component: database
+        annotations:
+          summary: "Database connection issues"
+          description: "Database connection errors detected"
+      
+      # ============================================
+      # Workflow Specific Alert - Consultation Form
+      # ============================================
+      - alert: ConsultationFormFailures
+        expr: |
+          sum(rate({service="n8n"} 
+            | json 
+            | workflow_name="consultation-form" 
+            | level="error" [5m]
+          )) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+          service: n8n
+          workflow: consultation-form
+        annotations:
+          summary: "Consultation form workflow failing"
+          description: "{{ $value }} errors per second in consultation form"
+      
+      # ============================================
+      # Execution Timeout Alert
+      # ============================================
+      - alert: N8nExecutionTimeouts
+        expr: |
+          sum(rate({service="n8n"} 
+            |~ "timeout|timed out" [5m]
+          )) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          service: n8n
+        annotations:
+          summary: "Execution timeouts increasing"
+          description: "{{ $value }} timeouts per second"
+      
+      # ============================================
+      # Memory Pressure Alert
+      # ============================================
+      - alert: N8nMemoryErrors
+        expr: |
+          sum(rate({service="n8n"} 
+            |~ "out of memory|memory limit|heap exhausted" [5m]
+          )) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: n8n
+          component: memory
+        annotations:
+          summary: "n8n memory issues detected"
+          description: "Memory errors in n8n logs"
+
+  - name: nginx-log-alerts
+    interval: 1m
+    rules:
+      # ============================================
+      # High 5xx Rate
+      # ============================================
+      - alert: NginxHigh5xxRate
+        expr: |
+          (
+            sum(rate({service="nginx"} | json | status=~"5.."[5m]))
+            /
+            sum(rate({service="nginx"}[5m]))
+          ) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+          service: nginx
+        annotations:
+          summary: "High 5xx error rate"
+          description: "5xx rate is {{ $value | humanizePercentage }}"
+      
+      # ============================================
+      # Slow Response Time
+      # ============================================
+      - alert: NginxSlowResponses
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate({service="nginx"} | json | unwrap request_time [5m])) by (le)
+          ) > 5
+        for: 3m
+        labels:
+          severity: warning
+          service: nginx
+        annotations:
+          summary: "Slow responses detected"
+          description: "p95 response time is {{ $value }}s"
+      
+      # ============================================
+      # Rate Limiting (429 errors)
+      # ============================================
+      - alert: RateLimitingTriggered
+        expr: |
+          sum(rate({service="nginx"} | json | status="429"[5m])) > 0
+        for: 1m
+        labels:
+          severity: info
+          service: nginx
+        annotations:
+          summary: "Rate limiting active"
+          description: "Clients are being rate limited"
+      
+      # ============================================
+      # 404 Spike (Potential Scanning)
+      # ============================================
+      - alert: Nginx404Spike
+        expr: |
+          sum(rate({service="nginx"} | json | status="404"[5m])) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: nginx
+          type: security
+        annotations:
+          summary: "High 404 rate - possible scanning"
+          description: "{{ $value }} 404s per second"
+
+  - name: twenty-crm-log-alerts
+    interval: 1m
+    rules:
+      # ============================================
+      # Twenty CRM Errors
+      # ============================================
+      - alert: TwentyCRMErrors
+        expr: |
+          sum(rate({service="twenty-crm", level="error"}[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          service: twenty-crm
+        annotations:
+          summary: "Twenty CRM errors detected"
+          description: "{{ $value }} errors per second"
+      
+      # ============================================
+      # API Rate Limit Hits
+      # ============================================
+      - alert: TwentyCRMRateLimit
+        expr: |
+          sum(rate({service="twenty-crm"} 
+            |~ "rate limit|429|too many requests" [5m]
+          )) > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: twenty-crm
+        annotations:
+          summary: "Twenty CRM rate limiting"
+          description: "API rate limit being hit"
+
+  - name: system-log-alerts
+    interval: 5m
+    rules:
+      # ============================================
+      # Out of Memory Errors
+      # ============================================
+      - alert: OutOfMemoryErrors
+        expr: |
+          sum(rate({service="system"} |~ "Out of memory|OOM|killed process"[5m])) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "Out of memory errors"
+          description: "OOM killer triggered"
+      
+      # ============================================
+      # Disk Full
+      # ============================================
+      - alert: DiskFull
+        expr: |
+          sum(rate({service="system"} |~ "No space left on device"[5m])) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "Disk full errors"
+          description: "Disk space exhausted"
+      
+      # ============================================
+      # SSH Brute Force
+      # ============================================
+      - alert: SSHBruteForce
+        expr: |
+          sum(rate({service="auth"} |~ "Failed password"[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+          type: security
+        annotations:
+          summary: "SSH brute force detected"
+          description: "Multiple failed SSH attempts"

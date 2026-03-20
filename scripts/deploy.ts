@@ -1,77 +1,44 @@
 #!/usr/bin/env ts-node
-/**
- * Deploy script for zaplit-com and zaplit-org to Google Cloud Run
- */
 import { execSync } from 'child_process';
-import * as fs from 'fs';
-import * as path from 'path';
 
-interface DeployOptions {
-  service: 'zaplit-com' | 'zaplit-org';
-  project?: string;
-  region?: string;
-  skipTests?: boolean;
-}
-
-const deploy = async (options: DeployOptions): Promise<void> => {
-  const { 
-    service, 
-    project = 'zaplit-website-prod', 
-    region = 'us-central1',
-    skipTests = false
-  } = options;
+const main = () => {
+  const app = process.argv[2];
   
-  const serviceDir = path.resolve(__dirname, '..', service);
-  
-  if (!fs.existsSync(serviceDir)) {
-    console.error(`Service not found: ${serviceDir}`);
+  if (!app || !['com', 'org'].includes(app)) {
+    console.error('Usage: ts-node scripts/deploy.ts <com|org>');
     process.exit(1);
   }
   
-  console.log(`Deploying ${service}...`);
+  const service = `zaplit-${app}`;
+  const project = process.env.GCP_PROJECT || 'zaplit-website-prod';
   
-  if (!skipTests) {
-    console.log('Running checks...');
-    execSync('pnpm typecheck', { cwd: serviceDir, stdio: 'inherit' });
-    execSync('pnpm lint', { cwd: serviceDir, stdio: 'inherit' });
-  }
+  console.log(`🚀 Deploying ${service}...`);
   
-  console.log('Building container...');
+  // Build
+  execSync(`ts-node scripts/build.ts ${app}`, { stdio: 'inherit' });
+  
+  // Tag image
+  console.log('  → Tagging image...');
   execSync(
-    `gcloud builds submit --tag gcr.io/${project}/${service} ${serviceDir}`,
+    `docker build -t gcr.io/${project}/${service}:latest ./${service}`,
     { stdio: 'inherit' }
   );
   
-  console.log('Deploying to Cloud Run...');
-  const deployCmd = [
-    'gcloud run deploy', service,
-    `--image gcr.io/${project}/${service}`,
-    '--platform managed',
-    `--region ${region}`,
-    '--allow-unauthenticated',
-    `--project ${project}`,
-    '--set-env-vars="NODE_ENV=production"'
-  ];
+  // Push
+  console.log('  → Pushing to GCR...');
+  execSync(`docker push gcr.io/${project}/${service}:latest`, { stdio: 'inherit' });
   
-  if (service === 'zaplit-com') {
-    deployCmd.push(
-      '--set-secrets="N8N_WEBHOOK_CONSULTATION=n8n-webhook-consultation:latest,N8N_WEBHOOK_CONTACT=n8n-webhook-contact:latest,N8N_WEBHOOK_SECRET=n8n-webhook-secret:latest"'
-    );
-  }
+  // Deploy
+  console.log('  → Deploying to Cloud Run...');
+  execSync(
+    `gcloud run deploy ${service} ` +
+    `--image=gcr.io/${project}/${service}:latest ` +
+    `--region=us-central1 --platform=managed ` +
+    `--allow-unauthenticated`,
+    { stdio: 'inherit' }
+  );
   
-  execSync(deployCmd.join(' '), { stdio: 'inherit' });
-  
-  console.log(`${service} deployed successfully!`);
+  console.log('✅ Deployment complete');
 };
 
-const service = process.argv[2] as 'zaplit-com' | 'zaplit-org';
-
-if (!service || !['zaplit-com', 'zaplit-org'].includes(service)) {
-  console.error('Usage: ts-node scripts/deploy.ts <zaplit-com|zaplit-org>');
-  process.exit(1);
-}
-
-deploy({ service }).catch((err) => {
-  console.error('Deployment failed:', err);
-  process.exit(1);
-});
+main();

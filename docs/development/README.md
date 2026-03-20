@@ -1,111 +1,76 @@
 # Development
 
-> **Development guidelines and best practices**
+## Setup
 
-## Contributing
+```bash
+# Clone repo
+git clone <repo-url>
+cd zaplit
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing`)
-3. Make changes with tests
-4. Run quality checks (`pnpm ci`)
-5. Submit pull request
+# Install dependencies
+pnpm install
+
+# Start dev servers
+pnpm dev:com  # http://localhost:3000
+pnpm dev:org  # http://localhost:3001
+```
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript 5.7 (Strict mode)
+- **Styling**: Tailwind CSS 4
+- **Testing**: Vitest (unit), Playwright (E2E)
+- **Linting**: ESLint + Prettier
 
 ## Code Standards
 
-### TypeScript (Strict)
+### TypeScript
+- Strict mode enabled
+- No `any` types
+- Explicit return types on exports
 
-```json
-{
-  "compilerOptions": {
-    "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "noUncheckedIndexedAccess": true
-  }
-}
-```
+### Components
+- Server Components by default
+- `'use client'` only when needed
+- Props interface always defined
 
-### Component Patterns
-
-**Server Component (Default):**
-```tsx
-// No 'use client'
-export default async function Page() {
-  const data = await fetch('/api/data');
-  return <div>{data}</div>;
-}
-```
-
-**Client Component:**
-```tsx
-'use client';
-import { useState } from 'react';
-
-export function Counter() {
-  const [count, setCount] = useState(0);
-  return <button onClick={() => setCount(c => c + 1)}>{count}</button>;
-}
-```
-
-**Form Component:**
-```tsx
-'use client';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-
-const schema = z.object({
-  email: z.string().email()
-});
-
-export function MyForm() {
-  const { register, handleSubmit } = useForm({
-    resolver: zodResolver(schema)
-  });
-  return <form onSubmit={handleSubmit(onSubmit)}>...</form>;
-}
-```
+### Forms
+- Zod validation schemas
+- Server Actions for submission
+- Error handling with user feedback
 
 ## Testing
 
-### Unit Tests (Vitest)
-
 ```bash
-pnpm test
-pnpm test:watch
+pnpm test        # Unit tests
+pnpm test:e2e    # E2E tests
+pnpm test:ui     # Vitest UI
 ```
 
-### E2E Tests (Playwright)
+## Git Workflow
+
+1. Create feature branch: `git checkout -b feature/name`
+2. Make changes, commit with conventional commits
+3. Push and create PR
+4. Merge to main triggers deployment
+
+## Environment Variables
+
+Copy `.env.example` to `.env.local`:
 
 ```bash
-pnpm test:e2e
-pnpm test:e2e --ui
+# n8n
+N8N_WEBHOOK_SECRET=...
+N8N_WEBHOOK_CONSULTATION=...
+N8N_WEBHOOK_CONTACT=...
+
+# Twenty CRM
+TWENTY_BASE_URL=...
+TWENTY_API_KEY=...
+
+# App
+APP_SECRET=...
 ```
 
-## File Naming
-
-| Type | Pattern |
-|------|---------|
-| Components | PascalCase (`Button.tsx`) |
-| Hooks | camelCase with `use` (`useForm.ts`) |
-| Utils | camelCase (`formatDate.ts`) |
-| Types | PascalCase (`FormData.ts`) |
-
-## Do's and Don'ts
-
-✅ **Do:**
-- Use Server Components by default
-- Use React Hook Form + Zod for forms
-- Colocate tests (`*.test.tsx`)
-- Use `next/image` for images
-- Use `next/link` for navigation
-
-❌ **Don't:**
-- Use `any` types
-- Fetch in `useEffect` (use Server Components)
-- Use inline styles
-- Commit `.env.local`
-
----
-
-**Related**: [Testing](./testing.md), [Operations](../ops/)
+Production secrets are in Google Secret Manager.

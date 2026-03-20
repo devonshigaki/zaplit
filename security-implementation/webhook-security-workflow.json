@@ -1,0 +1,212 @@
+{
+  "name": "Secure Webhook Handler for Twenty CRM",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "secure-form-submission",
+        "responseMode": "responseNode",
+        "options": {
+          "ignoreBots": true
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "secure-form-submission"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Security validation middleware\nconst headers = $input.headers;\nconst body = $input.body;\n\n// 1. Validate Bearer Token\nconst authHeader = headers['authorization'] || headers['Authorization'];\nconst expectedToken = process.env.WEBHOOK_BEARER_TOKEN;\n\nif (!authHeader || authHeader !== `Bearer ${expectedToken}`) {\n  return [{\n    json: {\n      status: 'error',\n      message: 'Unauthorized: Invalid or missing authentication token',\n      code: 'AUTH_FAILED'\n    },\n    statusCode: 401\n  }];\n}\n\n// 2. Validate required fields\nconst requiredFields = ['email', 'name', 'message'];\nconst missingFields = requiredFields.filter(field => !body[field]);\n\nif (missingFields.length > 0) {\n  return [{\n    json: {\n      status: 'error',\n      message: `Missing required fields: ${missingFields.join(', ')}`,\n      code: 'VALIDATION_FAILED'\n    },\n    statusCode: 400\n  }];\n}\n\n// 3. Sanitize PII for logging\nconst sanitizedData = {\n  ...body,\n  email: '[REDACTED]',\n  ip: headers['x-forwarded-for'] || 'unknown',\n  timestamp: new Date().toISOString()\n};\n\n// Log sanitized data for audit\nconsole.log('Webhook received:', JSON.stringify(sanitizedData));\n\n// 4. Return validated data\nreturn [{\n  json: {\n    status: 'validated',\n    data: body,\n    metadata: {\n      receivedAt: new Date().toISOString(),\n      sourceIp: headers['x-forwarded-for'] || 'unknown',\n      userAgent: headers['user-agent'] || 'unknown'\n    }\n  }\n}];"
+      },
+      "id": "security-validation",
+      "name": "Security Validation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if validation failed (has statusCode)\nif ($input.json.statusCode) {\n  return [{ json: $input.json, statusCode: $input.json.statusCode }];\n}\nreturn [$input];"
+      },
+      "id": "check-validation",
+      "name": "Check Validation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "validated",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "if-validated",
+      "name": "If Validated",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.twenty.com/rest/companies",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "name": "={{ $json.data.companyName || $json.data.name }}",
+          "domainName": "={{ $json.data.email.split('@')[1] }}"
+        },
+        "options": {}
+      },
+      "id": "create-company",
+      "name": "Create Company in Twenty CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.twenty.com/rest/people",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "name": "={{ $json.data.name }}",
+          "email": "={{ $json.data.email }}",
+          "companyId": "={{ $input.all()[0].json.id }}"
+        }
+      },
+      "id": "create-person",
+      "name": "Create Person in Twenty CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1450, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "={{ $json.statusCode || 400 }}"
+        }
+      },
+      "id": "respond-error",
+      "name": "Respond with Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Security Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Security Validation": {
+      "main": [
+        [
+          {
+            "node": "Check Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Validation": {
+      "main": [
+        [
+          {
+            "node": "If Validated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Validated": {
+      "main": [
+        [
+          {
+            "node": "Create Company in Twenty CRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond with Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Company in Twenty CRM": {
+      "main": [
+        [
+          {
+            "node": "Create Person in Twenty CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Person in Twenty CRM": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["security", "webhook", "twenty-crm"]
+}

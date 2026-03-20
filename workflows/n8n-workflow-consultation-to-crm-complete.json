@@ -1,0 +1,180 @@
+{
+  "name": "Consultation Form to CRM",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "consultation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ED6E0A75-011D-4066-8BC9-2C6569A3C8E0",
+      "name": "Consultation Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [420, 300],
+      "webhookId": "ED6E0A75-011D-4066-8BC9-2C6569A3C8E0"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse form data and prepare for CRM\nconst input = $input.first().json.body;\n\n// Split name into first and last\nconst nameParts = input.data.name?.split(' ') || ['Unknown'];\nconst firstName = nameParts[0];\nconst lastName = nameParts.slice(1).join(' ') || '';\n\n// Format techStack and compliance arrays\nconst techStack = Array.isArray(input.data.techStack) \n  ? input.data.techStack.join(', ') \n  : input.data.techStack || '';\n  \nconst compliance = Array.isArray(input.data.compliance) \n  ? input.data.compliance.join(', ') \n  : input.data.compliance || '';\n\nreturn [{\n  json: {\n    person: {\n      firstName: firstName,\n      lastName: lastName,\n      email: input.data.email,\n      jobTitle: input.data.role\n    },\n    company: {\n      name: input.data.company\n    },\n    note: {\n      message: input.data.message,\n      techStack: techStack,\n      securityLevel: input.data.securityLevel,\n      compliance: compliance,\n      teamSize: input.data.teamSize\n    }\n  }\n}];"
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Process Form Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.zaplit.com/rest/people",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"name\": {\n    \"firstName\": \"{{ $json.person.firstName }}\",\n    \"lastName\": \"{{ $json.person.lastName }}\"\n  },\n  \"emails\": [\n    {\n      \"email\": \"{{ $json.person.email }}\",\n      \"isPrimary\": true\n    }\n  ],\n  \"jobTitle\": \"{{ $json.person.jobTitle }}\"\n}",
+        "options": {}
+      },
+      "id": "e38c4ac7-51ca-4951-9559-058240c3c8c6",
+      "name": "Create Person",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "header-auth-twenty-crm",
+          "name": "Twenty CRM Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.zaplit.com/rest/companies",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"name\": \"{{ $json.company.name }}\"\n}",
+        "options": {}
+      },
+      "id": "708ba8c3-8715-4afc-97a6-c05bd2957da8",
+      "name": "Create Company",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "header-auth-twenty-crm",
+          "name": "Twenty CRM Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.zaplit.com/rest/notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"title\": \"Consultation Request\",\n  \"body\": \"Message: {{ $json.note.message }}\\n\\nTechnical Details:\\n- Team Size: {{ $json.note.teamSize }}\\n- Tech Stack: {{ $json.note.techStack }}\\n- Security Level: {{ $json.note.securityLevel }}\\n- Compliance: {{ $json.note.compliance }}\"\n}",
+        "options": {}
+      },
+      "id": "c3d4e5f6-a7b8-9012-cdef-345678901234",
+      "name": "Create Note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "header-auth-twenty-crm",
+          "name": "Twenty CRM Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"message\": \"Thank you for your submission. We'll be in touch soon!\"\n}",
+        "options": {}
+      },
+      "id": "2747FDC4-C12A-4E52-AAB7-22848D30BFF7",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1520, 300]
+    }
+  ],
+  "connections": {
+    "Consultation Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Form Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Form Data": {
+      "main": [
+        [
+          {
+            "node": "Create Person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Person": {
+      "main": [
+        [
+          {
+            "node": "Create Company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Company": {
+      "main": [
+        [
+          {
+            "node": "Create Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Note": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [],
+  "pinData": {},
+  "id": "129F205D-3954-4E94-AFB7-4746F4C8D83A"
+}

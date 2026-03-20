@@ -22,9 +22,9 @@ export const consultationFormSchema = z.object({
   email: z.string().email("Valid email required"),
   company: z.string().min(2, "Company is required"),
   role: z.string().min(2, "Role is required"),
-  teamSize: z.enum(["1-10", "11-50", "51-200", "201-500", "501-1000", "1000+"]),
+  teamSize: z.enum(["1–10", "11–50", "51–200", "200+"]),
   techStack: z.array(z.string()).optional(),
-  securityLevel: z.enum(["standard", "enhanced", "enterprise"]).optional(),
+  securityLevel: z.enum(["standard", "high", "enterprise"]).optional(),
   compliance: z.array(z.string()).optional(),
   message: z.string().optional(),
   website: z.string().optional(), // Honeypot field

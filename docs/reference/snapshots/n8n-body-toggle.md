@@ -1,0 +1,429 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - main [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e405]:
+          - radiogroup [ref=e471]:
+            - radio "Editor" [checked] [ref=e472]:
+              - generic [ref=e473] [cursor=pointer]: Editor
+            - radio "Executions" [ref=e474]:
+              - generic [ref=e475] [cursor=pointer]: Executions
+            - radio "Evaluations" [ref=e476]:
+              - generic [ref=e477] [cursor=pointer]: Evaluations
+          - complementary [ref=e478]:
+            - generic [ref=e479]:
+              - generic [ref=e481]:
+                - link [ref=e482] [cursor=pointer]:
+                  - /url: /home
+                  - generic [ref=e483]:
+                    - img [ref=e484]
+                    - img [ref=e486]
+                - menubar [ref=e489]:
+                  - menuitem "Add new item" [ref=e490]:
+                    - button "Add new item" [ref=e492] [cursor=pointer]:
+                      - img [ref=e494]
+                - button "Open command palette" [ref=e497] [cursor=pointer]:
+                  - img [ref=e499]
+                - button "Toggle sidebar" [ref=e504] [cursor=pointer]:
+                  - img [ref=e506]
+              - generic [ref=e514]:
+                - menuitem "Overview" [ref=e516] [cursor=pointer]:
+                  - img [ref=e518]
+                  - generic [ref=e523]: Overview
+                - menuitem "Chat" [ref=e525] [cursor=pointer]:
+                  - img [ref=e527]
+                  - generic [ref=e529]:
+                    - generic [ref=e530]: Chat
+                    - generic [ref=e531]: beta
+              - generic [ref=e533]:
+                - menuitem "Templates" [ref=e535] [cursor=pointer]:
+                  - img [ref=e537]
+                  - generic [ref=e543]: Templates
+                - menuitem "Insights" [ref=e545] [cursor=pointer]:
+                  - img [ref=e547]
+                  - generic [ref=e550]: Insights
+                - menuitem "Help" [ref=e552] [cursor=pointer]:
+                  - img [ref=e554]
+                  - generic [ref=e559]: Help
+                  - img [ref=e560]
+                - menuitem "Settings" [ref=e563] [cursor=pointer]:
+                  - img [ref=e565]
+                  - generic [ref=e570]: Settings
+                  - img [ref=e571]
+          - main [ref=e573]:
+            - generic [ref=e576]:
+              - generic [ref=e578]:
+                - generic [ref=e580]:
+                  - generic:
+                    - img
+                    - img:
+                      - group "Edge from ED6E0A75-011D-4066-8BC9-2C6569A3C8E0 to 2747FDC4-C12A-4E52-AAB7-22848D30BFF7":
+                        - img
+                    - img:
+                      - group "Edge from ED6E0A75-011D-4066-8BC9-2C6569A3C8E0 to e38c4ac7-51ca-4951-9559-058240c3c8c6" [ref=e1149] [cursor=pointer]:
+                        - img
+                    - generic:
+                      - group [ref=e581] [cursor=pointer]:
+                        - generic [ref=e582]:
+                          - generic [ref=e585]: POST
+                          - generic [ref=e588]:
+                            - button "Execute step" [ref=e589]:
+                              - img [ref=e591]
+                            - button "Deactivate" [ref=e593]:
+                              - img [ref=e595]
+                            - button "Delete" [ref=e598]:
+                              - img [ref=e600]
+                            - button "More actions" [ref=e602]:
+                              - img [ref=e604]
+                          - generic [ref=e606]:
+                            - generic [ref=e609]:
+                              - img
+                            - generic:
+                              - generic: Consultation Webhook
+                          - generic:
+                            - generic:
+                              - generic:
+                                - img
+                              - button "Execute workflow" [ref=e808]:
+                                - generic [ref=e809]:
+                                  - img [ref=e810]
+                                  - generic [ref=e812]: Execute workflow
+                      - group [ref=e610] [cursor=pointer]:
+                        - generic [ref=e611]:
+                          - img [ref=e617]
+                          - generic [ref=e625]:
+                            - button "Execute step" [ref=e626]:
+                              - img [ref=e628]
+                            - button "Deactivate" [ref=e630]:
+                              - img [ref=e632]
+                            - button "Delete" [ref=e635]:
+                              - img [ref=e637]
+                            - button "More actions" [ref=e639]:
+                              - img [ref=e641]
+                          - generic [ref=e643]:
+                            - generic [ref=e646]:
+                              - img
+                            - generic:
+                              - generic: Success Response
+                      - group [ref=e1153] [cursor=pointer]:
+                        - generic [ref=e1154]:
+                          - img [ref=e1160]
+                          - generic [ref=e1168]:
+                            - button "Execute step" [ref=e1169]:
+                              - img [ref=e1171]
+                            - button "Deactivate" [ref=e1173]:
+                              - img [ref=e1175]
+                            - button "Delete" [ref=e1178]:
+                              - img [ref=e1180]
+                            - button "More actions" [ref=e1182]:
+                              - img [ref=e1184]
+                          - generic [ref=e1186]:
+                            - generic [ref=e1189]:
+                              - img
+                            - generic:
+                              - generic: HTTP Request
+                              - generic: "POST: https://crm.zaplit.com/rest/people"
+                - img [ref=e647]
+                - img [ref=e648]
+                - generic [ref=e650]:
+                  - button "Zoom to Fit" [ref=e652] [cursor=pointer]:
+                    - img [ref=e654]
+                  - button "Zoom In" [ref=e657] [cursor=pointer]:
+                    - img [ref=e659]
+                  - button "Zoom Out" [ref=e664] [cursor=pointer]:
+                    - img [ref=e666]
+                  - button "Tidy Up" [ref=e671] [cursor=pointer]:
+                    - img [ref=e673]
+              - button "Execute workflow" [ref=e678] [cursor=pointer]:
+                - generic [ref=e679]:
+                  - img [ref=e680]
+                  - generic [ref=e682]: Execute workflow
+              - generic [ref=e1194]:
+                - button "Open nodes panel" [ref=e1196] [cursor=pointer]:
+                  - img [ref=e1198]
+                - button "Command bar" [ref=e1201] [cursor=pointer]:
+                  - img [ref=e1203]
+                - button "Add sticky note" [ref=e1208] [cursor=pointer]:
+                  - img [ref=e1210]
+                - button "Open focus panel" [ref=e1215] [cursor=pointer]:
+                  - img [ref=e1217]
+              - generic:
+                - complementary
+            - generic [ref=e718] [cursor=pointer]:
+              - generic [ref=e719]: Logs
+              - generic [ref=e721]:
+                - button "Pop out panel" [ref=e723]:
+                  - img [ref=e725]
+                - button "Open panel" [ref=e728]:
+                  - img [ref=e730]
+        - dialog [ref=e1221]:
+          - complementary:
+            - list
+            - list
+            - list:
+              - listitem [ref=e1222] [cursor=pointer]:
+                - generic [ref=e1225]:
+                  - img
+          - generic [ref=e1226]:
+            - generic [ref=e1227]:
+              - generic [ref=e1228]:
+                - generic [ref=e1232]:
+                  - img
+                - generic "HTTP Request" [ref=e1234]:
+                  - generic [ref=e1236] [cursor=pointer]: HTTP Request
+              - generic [ref=e1237]:
+                - link "Docs" [ref=e1238] [cursor=pointer]:
+                  - /url: https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.httprequest/?utm_source=n8n_app&utm_medium=node_settings_modal-credential_link&utm_campaign=n8n-nodes-base.httpRequest
+                  - generic [ref=e1241]:
+                    - generic [ref=e1242]: Docs
+                    - img [ref=e1243]
+                - button [ref=e1246] [cursor=pointer]:
+                  - img [ref=e1248]
+            - main [ref=e1250]:
+              - generic [ref=e1252]:
+                - generic [ref=e1253]:
+                  - generic [ref=e1256]: Input
+                  - radiogroup [ref=e1258]:
+                    - radio "Schema" [checked] [ref=e1259]:
+                      - generic [ref=e1260] [cursor=pointer]: Schema
+                    - radio "Table" [ref=e1261]:
+                      - generic [ref=e1262] [cursor=pointer]: Table
+                    - radio "JSON" [ref=e1263]:
+                      - generic [ref=e1264] [cursor=pointer]: JSON
+                - generic [ref=e1269]:
+                  - generic [ref=e1272]:
+                    - generic [ref=e1273] [cursor=pointer]:
+                      - img [ref=e1275]
+                      - generic [ref=e1279]:
+                        - img
+                      - generic [ref=e1280]: Consultation Webhook
+                      - img [ref=e1281]
+                      - generic [ref=e1283]: Preview
+                    - generic [ref=e1284]:
+                      - text: The fields below come from the last successful execution.
+                      - generic [ref=e1287] [cursor=pointer]: Execute node
+                      - text: to refresh them.
+                  - generic [ref=e1290]:
+                    - img [ref=e1293] [cursor=pointer]
+                    - generic [ref=e1295]:
+                      - img [ref=e1296]
+                      - generic [ref=e1301]: headers
+                  - generic [ref=e1306]:
+                    - img [ref=e1307]
+                    - generic [ref=e1310]: host
+                  - generic [ref=e1315]:
+                    - img [ref=e1316]
+                    - generic [ref=e1319]: user-agent
+                  - generic [ref=e1324]:
+                    - img [ref=e1325]
+                    - generic [ref=e1328]: content-length
+                  - generic [ref=e1333]:
+                    - img [ref=e1334]
+                    - generic [ref=e1337]: accept
+                  - generic [ref=e1342]:
+                    - img [ref=e1343]
+                    - generic [ref=e1346]: content-type
+                  - generic [ref=e1351]:
+                    - img [ref=e1352]
+                    - generic [ref=e1355]: via
+                  - generic [ref=e1360]:
+                    - img [ref=e1361]
+                    - generic [ref=e1364]: x-forwarded-for
+                  - generic [ref=e1369]:
+                    - img [ref=e1370]
+                    - generic [ref=e1373]: x-forwarded-host
+                  - generic [ref=e1378]:
+                    - img [ref=e1379]
+                    - generic [ref=e1382]: x-forwarded-proto
+                  - generic [ref=e1387]:
+                    - img [ref=e1388]
+                    - generic [ref=e1391]: accept-encoding
+                  - generic [ref=e1394]:
+                    - img [ref=e1397] [cursor=pointer]
+                    - generic [ref=e1399]:
+                      - img [ref=e1400]
+                      - generic [ref=e1405]: params
+                  - generic [ref=e1408]:
+                    - img [ref=e1411] [cursor=pointer]
+                    - generic [ref=e1413]:
+                      - img [ref=e1414]
+                      - generic [ref=e1419]: query
+                  - generic [ref=e1422]:
+                    - img [ref=e1425] [cursor=pointer]
+                    - generic [ref=e1427]:
+                      - img [ref=e1428]
+                      - generic [ref=e1433]: body
+                  - generic [ref=e1436]:
+                    - img [ref=e1439] [cursor=pointer]
+                    - generic [ref=e1441]:
+                      - img [ref=e1442]
+                      - generic [ref=e1447]: data
+                  - generic [ref=e1452]:
+                    - img [ref=e1453]
+                    - generic [ref=e1456]: firstName
+                  - generic [ref=e1461]:
+                    - img [ref=e1462]
+                    - generic [ref=e1465]: lastName
+                  - generic [ref=e1470]:
+                    - img [ref=e1471]
+                    - generic [ref=e1474]: email
+                  - generic [ref=e1479]:
+                    - img [ref=e1480]
+                    - generic [ref=e1483]: message
+                  - generic [ref=e1488]:
+                    - img [ref=e1489]
+                    - generic [ref=e1492]: formType
+                  - generic [ref=e1497]:
+                    - img [ref=e1498]
+                    - generic [ref=e1501]: webhookUrl
+                  - generic [ref=e1506]:
+                    - img [ref=e1507]
+                    - generic [ref=e1510]: executionMode
+                  - generic [ref=e1514] [cursor=pointer]:
+                    - img [ref=e1516]
+                    - generic [ref=e1518]: Variables and context
+              - generic [ref=e1522]:
+                - button [ref=e1524]:
+                  - img [ref=e1525]
+                  - img [ref=e1527]
+                  - img [ref=e1529]
+                - generic [ref=e1531]:
+                  - generic [ref=e1532]:
+                    - generic [ref=e1534]:
+                      - generic [ref=e1537] [cursor=pointer]: Parameters
+                      - generic [ref=e1540] [cursor=pointer]: Settings
+                    - button "Execute step" [ref=e1541] [cursor=pointer]:
+                      - generic [ref=e1542]:
+                        - img [ref=e1543]
+                        - generic [ref=e1545]: Execute step
+                  - generic [ref=e1546]:
+                    - generic [ref=e1548]:
+                      - button "Import cURL" [ref=e1551] [cursor=pointer]:
+                        - generic [ref=e1553]: Import cURL
+                      - generic [ref=e1556]:
+                        - generic [ref=e1558]:
+                          - generic [ref=e1559]:
+                            - generic [ref=e1561]: Method
+                            - img [ref=e1564]
+                          - generic [ref=e1571]:
+                            - button [ref=e1575] [cursor=pointer]:
+                              - img [ref=e1576]
+                            - radiogroup [ref=e1581]:
+                              - radio "Fixed" [checked] [ref=e1582]:
+                                - generic [ref=e1583] [cursor=pointer]: Fixed
+                              - radio "Expression" [ref=e1584]:
+                                - generic [ref=e1585] [cursor=pointer]: Expression
+                        - 'generic "Parameter: \"method\"" [ref=e1591]':
+                          - generic [ref=e1595]:
+                            - combobox "Select" [ref=e1880] [cursor=pointer]: POST
+                            - img [ref=e1599] [cursor=pointer]
+                      - generic [ref=e1603]:
+                        - generic [ref=e1605]:
+                          - generic [ref=e1606]:
+                            - generic [ref=e1608]: URL
+                            - img [ref=e1611]
+                          - generic [ref=e1618]:
+                            - button "Focus parameter" [ref=e1619] [cursor=pointer]:
+                              - img [ref=e1621]
+                            - button [ref=e1627] [cursor=pointer]:
+                              - img [ref=e1628]
+                            - radiogroup [ref=e1633]:
+                              - radio "Fixed" [checked] [ref=e1634]:
+                                - generic [ref=e1635] [cursor=pointer]: Fixed
+                              - radio "Expression" [ref=e1636]:
+                                - generic [ref=e1637] [cursor=pointer]: Expression
+                        - 'textbox "Parameter: \"url\"" [ref=e1646]':
+                          - /placeholder: http://example.com/index.html
+                          - text: https://crm.zaplit.com/rest/people
+                      - generic [ref=e1649]:
+                        - generic [ref=e1651]:
+                          - generic [ref=e1654]: Authentication
+                          - button [ref=e1662] [cursor=pointer]:
+                            - img [ref=e1663]
+                        - 'generic "Parameter: \"authentication\"" [ref=e1673]':
+                          - generic [ref=e1677]:
+                            - combobox "Select" [ref=e1909] [cursor=pointer]: Generic Credential Type
+                            - img [ref=e1681] [cursor=pointer]
+                      - generic [ref=e1912]:
+                        - generic [ref=e1914]:
+                          - generic [ref=e1917]: Generic Auth Type
+                          - radiogroup [ref=e1922]:
+                            - radio "Fixed" [checked] [ref=e1923]:
+                              - generic [ref=e1924] [cursor=pointer]: Fixed
+                            - radio "Expression" [ref=e1925]:
+                              - generic [ref=e1926] [cursor=pointer]: Expression
+                        - generic [ref=e1932]:
+                          - 'generic "Parameter: \"genericAuthType\"" [ref=e1934]':
+                            - generic [ref=e1938]:
+                              - combobox "Select" [ref=e1939] [cursor=pointer]: Header Auth
+                              - img [ref=e1942] [cursor=pointer]
+                          - generic [ref=e1984]:
+                            - generic [ref=e1989]: Header Auth
+                            - generic [ref=e1990]:
+                              - generic [ref=e1996]:
+                                - combobox "Select Credential" [ref=e1997] [cursor=pointer]: Header Auth account
+                                - img [ref=e2000] [cursor=pointer]
+                              - img [ref=e2204] [cursor=pointer]
+                      - generic [ref=e1685]:
+                        - generic [ref=e1687]:
+                          - generic [ref=e1688]:
+                            - generic [ref=e1690]: Send Query Parameters
+                            - img [ref=e1693]
+                          - button [ref=e1704] [cursor=pointer]:
+                            - img [ref=e1705]
+                        - generic [ref=e1715]:
+                          - switch
+                      - generic [ref=e1719]:
+                        - generic [ref=e1721]:
+                          - generic [ref=e1722]:
+                            - generic [ref=e1724]: Send Headers
+                            - img [ref=e1727]
+                          - button [ref=e1738] [cursor=pointer]:
+                            - img [ref=e1739]
+                        - generic [ref=e1749]:
+                          - switch
+                      - generic [ref=e1753]:
+                        - generic [ref=e1755]:
+                          - generic [ref=e1756]:
+                            - generic [ref=e1758]: Send Body
+                            - img [ref=e1761]
+                          - button [expanded] [active] [ref=e1772] [cursor=pointer]:
+                            - img [ref=e1773]
+                        - generic [ref=e1783]:
+                          - switch
+                      - generic [ref=e1786]:
+                        - generic [ref=e1792]: Options
+                        - generic [ref=e1794]:
+                          - generic [ref=e1796]: No properties
+                          - generic [ref=e1803]:
+                            - combobox "Add option" [ref=e1804] [cursor=pointer]
+                            - img [ref=e1807] [cursor=pointer]
+                      - alert [ref=e1810]:
+                        - region [ref=e1813]: You can view the raw requests this node makes in your browser's developer console
+                    - generic [ref=e1815] [cursor=pointer]:
+                      - img [ref=e1816]
+                      - text: I wish this node would...
+              - generic [ref=e1819]:
+                - generic [ref=e1820]:
+                  - generic [ref=e1823]: Output
+                  - generic [ref=e1824]:
+                    - radiogroup [ref=e1825]:
+                      - radio "Schema" [ref=e1826]:
+                        - generic [ref=e1827] [cursor=pointer]: Schema
+                      - radio "Table" [checked] [ref=e1828]:
+                        - generic [ref=e1829] [cursor=pointer]: Table
+                      - radio "JSON" [ref=e1830]:
+                        - generic [ref=e1831] [cursor=pointer]: JSON
+                    - button "Edit Output" [ref=e1832] [cursor=pointer]:
+                      - img [ref=e1834]
+                - article [ref=e1840]:
+                  - img [ref=e1841]
+                  - heading "No output data" [level=1] [ref=e1843]
+                  - paragraph [ref=e1844]:
+                    - button "Execute step" [ref=e1845] [cursor=pointer]:
+                      - generic [ref=e1847]: Execute step
+                    - text: or
+                    - generic [ref=e1848] [cursor=pointer]: set mock data
+    - complementary
+  - menu [ref=e2224]:
+    - menuitem "Reset Value" [disabled]: Reset Value

@@ -1,9 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "crypto";
 
 // Rate limiting map (in production, use Redis)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_REQUESTS = 5;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1000;
+const N8N_TIMEOUT_MS = 10000; // 10 second timeout
+
+// Limit request body size to prevent DoS
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '1mb',
+    },
+  },
+};
 
 interface FormSubmission {
   formType: "consultation" | "contact" | "newsletter";
@@ -14,6 +27,15 @@ interface FormSubmission {
     url: string;
     userAgent?: string;
   };
+}
+
+// Hash IP for privacy using HMAC-SHA256
+function hashIP(ip: string): string {
+  const salt = process.env.IP_HASH_SALT || "zaplit-static-salt-2026";
+  return createHash("sha256")
+    .update(ip + salt)
+    .digest("hex")
+    .substring(0, 16);
 }
 
 function checkRateLimit(ip: string): boolean {
@@ -73,10 +95,36 @@ function getN8nWebhookUrl(formType: string): string | null {
   return urls[formType] || null;
 }
 
+// Retry wrapper with exponential backoff
+async function withRetry<T>(fn: () => Promise<T>, operationName: string): Promise<T | null> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (attempt < MAX_RETRIES) {
+        const delay = RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+        console.log(`[RETRY] ${operationName} failed (attempt ${attempt}), retrying in ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  console.error(`[RETRY] ${operationName} failed after ${MAX_RETRIES} attempts:`, lastError);
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    // Get client IP for rate limiting
-    const ip = request.headers.get("x-forwarded-for") || "unknown";
+    // Get client IP for rate limiting (use last IP in chain for Cloud Run)
+    const forwardedFor = request.headers.get("x-forwarded-for");
+    const ip = forwardedFor 
+      ? forwardedFor.split(",").pop()?.trim() || "unknown"
+      : request.headers.get("x-real-ip") || "unknown";
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const ipHash = hashIP(ip);
 
     // Check rate limit
     if (!checkRateLimit(ip)) {
@@ -128,22 +176,36 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    // Send to n8n
-    const response = await fetch(webhookUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Form-Source": "zaplit-org",
-        ...(process.env.N8N_WEBHOOK_SECRET && {
-          "X-Webhook-Secret": process.env.N8N_WEBHOOK_SECRET,
-        }),
-      },
-      body: JSON.stringify(enrichedPayload),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("n8n webhook error:", response.status, errorText);
+    // Send to n8n with retry and timeout
+    const n8nResult = await withRetry(async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), N8N_TIMEOUT_MS);
+      
+      try {
+        const response = await fetch(webhookUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Form-Source": "zaplit-org",
+            ...(process.env.N8N_WEBHOOK_SECRET && {
+              "X-Webhook-Secret": process.env.N8N_WEBHOOK_SECRET,
+            }),
+          },
+          body: JSON.stringify(enrichedPayload),
+          signal: controller.signal,
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return response;
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }, "n8n webhook");
+    
+    if (!n8nResult) {
       return NextResponse.json(
         { error: "Failed to process submission. Please try again." },
         { status: 502 }

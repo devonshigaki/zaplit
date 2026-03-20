@@ -1,0 +1,277 @@
+{
+  "name": "Consultation Form to CRM - HMAC Secured",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "consultation",
+        "responseMode": "responseNode",
+        "options": {
+          "responseData": "={}",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "ED6E0A75-011D-4066-8BC9-2C6569A3C8E0",
+      "name": "Consultation Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "ED6E0A75-011D-4066-8BC9-2C6569A3C8E0"
+    },
+    {
+      "parameters": {
+        "jsCode": "// HMAC Signature Verification\n// This node validates that the request came from an authorized source\n\nconst crypto = require('crypto');\n\n// Get the HMAC secret from credentials (stored securely in n8n)\nconst HMAC_SECRET = $credentials.webhookHmacSecret ? $credentials.webhookHmacSecret.secret : process.env.WEBHOOK_HMAC_SECRET;\n\nif (!HMAC_SECRET) {\n  throw new Error('HMAC_SECRET not configured. Please set up webhookHmacSecret credential or WEBHOOK_HMAC_SECRET environment variable.');\n}\n\n// Get the signature from headers\nconst signature = $input.first().json.headers['x-webhook-signature'] || \n                  $input.first().json.headers['X-Webhook-Signature'];\n\nif (!signature) {\n  throw new Error('Missing X-Webhook-Signature header. Request rejected.');\n}\n\n// Get the body for signature verification\nconst body = $input.first().json.body;\n\n// Verify timestamp to prevent replay attacks (optional but recommended)\nconst timestamp = $input.first().json.headers['x-webhook-timestamp'] || \n                  $input.first().json.headers['X-Webhook-Timestamp'];\n\nif (timestamp) {\n  const requestTime = parseInt(timestamp, 10);\n  const currentTime = Math.floor(Date.now() / 1000);\n  const tolerance = 300; // 5 minutes tolerance\n  \n  if (Math.abs(currentTime - requestTime) > tolerance) {\n    throw new Error('Request timestamp too old. Possible replay attack.');\n  }\n}\n\n// Compute expected signature\nconst payload = JSON.stringify(body);\nconst expectedSignature = crypto\n  .createHmac('sha256', HMAC_SECRET)\n  .update(payload)\n  .digest('hex');\n\n// Constant-time comparison to prevent timing attacks\nconst providedSigBuffer = Buffer.from(signature, 'hex');\nconst expectedSigBuffer = Buffer.from(expectedSignature, 'hex');\n\nlet isValid = false;\ntry {\n  isValid = providedSigBuffer.length === expectedSigBuffer.length && \n            crypto.timingSafeEqual(providedSigBuffer, expectedSigBuffer);\n} catch (e) {\n  isValid = false;\n}\n\nif (!isValid) {\n  throw new Error('Invalid HMAC signature. Request rejected.');\n}\n\n// HMAC verified - return the body for processing\nreturn [{\n  json: {\n    verified: true,\n    data: body\n  }\n}];"
+      },
+      "id": "hmac-verify-001",
+      "name": "Verify HMAC Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "credentials": {
+        "webhookHmacSecret": {
+          "id": "webhook-hmac-secret",
+          "name": "Webhook HMAC Secret"
+        }
+      },
+      "continueOnFail": false
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": false,\n  \"error\": \"Unauthorized: Invalid or missing HMAC signature\"\n}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "hmac-fail-001",
+      "name": "HMAC Failed Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [460, 520]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse form data and prepare for CRM\nconst input = $input.first().json.data;\n\n// Validate required fields\nif (!input.name || !input.email || !input.company) {\n  throw new Error('Missing required fields: name, email, or company');\n}\n\n// Split name into first and last\nconst nameParts = input.name.split(' ') || ['Unknown'];\nconst firstName = nameParts[0];\nconst lastName = nameParts.slice(1).join(' ') || '';\n\n// Format techStack and compliance arrays\nconst techStack = Array.isArray(input.techStack) \n  ? input.techStack.join(', ') \n  : input.techStack || '';\n  \nconst compliance = Array.isArray(input.compliance) \n  ? input.compliance.join(', ') \n  : input.compliance || '';\n\nreturn [{\n  json: {\n    person: {\n      firstName: firstName,\n      lastName: lastName,\n      email: input.email,\n      jobTitle: input.role || ''\n    },\n    company: {\n      name: input.company\n    },\n    note: {\n      message: input.message || '',\n      techStack: techStack,\n      securityLevel: input.securityLevel || '',\n      compliance: compliance,\n      teamSize: input.teamSize || '',\n      submittedAt: new Date().toISOString()\n    }\n  }\n}];"
+      },
+      "id": "process-form-001",
+      "name": "Process Form Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.zaplit.com/rest/people",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"name\": {\n    \"firstName\": \"{{ $json.person.firstName }}\",\n    \"lastName\": \"{{ $json.person.lastName }}\"\n  },\n  \"emails\": [\n    {\n      \"email\": \"{{ $json.person.email }}\",\n      \"isPrimary\": true\n    }\n  ],\n  \"jobTitle\": \"{{ $json.person.jobTitle }}\"\n}",
+        "options": {}
+      },
+      "id": "create-person-001",
+      "name": "Create Person in CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "header-auth-twenty-crm",
+          "name": "Twenty CRM Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.zaplit.com/rest/companies",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"name\": \"{{ $json.company.name }}\"\n}",
+        "options": {}
+      },
+      "id": "create-company-001",
+      "name": "Create Company in CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "header-auth-twenty-crm",
+          "name": "Twenty CRM Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.zaplit.com/rest/notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"title\": \"Consultation Request\",\n  \"body\": \"Message: {{ $json.note.message }}\\n\\nTechnical Details:\\n- Team Size: {{ $json.note.teamSize }}\\n- Tech Stack: {{ $json.note.techStack }}\\n- Security Level: {{ $json.note.securityLevel }}\\n- Compliance: {{ $json.note.compliance }}\\n- Submitted At: {{ $json.note.submittedAt }}\"\n}",
+        "options": {}
+      },
+      "id": "create-note-001",
+      "name": "Create Note in CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "header-auth-twenty-crm",
+          "name": "Twenty CRM Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"message\": \"Thank you for your submission. We'll be in touch soon!\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "success-response-001",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": false,\n  \"error\": \"Invalid form data. Please check required fields.\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "validation-error-001",
+      "name": "Validation Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [680, 520]
+    }
+  ],
+  "connections": {
+    "Consultation Webhook": {
+      "main": [
+        [
+          {
+            "node": "Verify HMAC Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify HMAC Signature": {
+      "main": [
+        [
+          {
+            "node": "Process Form Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "onError": [
+        [
+          {
+            "node": "HMAC Failed Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Form Data": {
+      "main": [
+        [
+          {
+            "node": "Create Person in CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "onError": [
+        [
+          {
+            "node": "Validation Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Person in CRM": {
+      "main": [
+        [
+          {
+            "node": "Create Company in CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Company in CRM": {
+      "main": [
+        [
+          {
+            "node": "Create Note in CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Note in CRM": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "id": "tag-production",
+      "name": "production"
+    },
+    {
+      "id": "tag-secure",
+      "name": "secure"
+    }
+  ],
+  "pinData": {},
+  "id": "consultation-form-hmac-001",
+  "description": "HMAC-secured consultation form workflow with signature verification"
+}

@@ -69,6 +69,11 @@ export function BookDemoSection() {
   const handleSubmit = async () => {
     resetError()
     
+    // Convert techStack object to array format expected by API
+    const techStackArray = Object.entries(formData.techStack).map(
+      ([category, tool]) => `${category}: ${tool}`
+    )
+    
     const result = await submitForm({
       formType: "consultation",
       data: {
@@ -78,7 +83,7 @@ export function BookDemoSection() {
         role: formData.role,
         teamSize: formData.teamSize,
         securityLevel: formData.securityLevel,
-        techStack: formData.techStack,
+        techStack: techStackArray,
         compliance: formData.compliance,
         message: formData.message,
       },

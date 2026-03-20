@@ -1,0 +1,322 @@
+{
+  "name": "Consultation Form to CRM - v2 Fixed",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "consultation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ED6E0A75-011D-4066-8BC9-2C6569A3C8E0",
+      "name": "Consultation Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [420, 300],
+      "webhookId": "ED6E0A75-011D-4066-8BC9-2C6569A3C8E0"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate and parse form data\nconst body = $input.first().json.body;\nconst errors = [];\n\n// Validation\nif (!body.data?.email) errors.push('Email is required');\nif (!body.data?.name) errors.push('Name is required');\n\n// Email format validation\nconst emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\nif (body.data?.email && !emailRegex.test(body.data.email)) {\n  errors.push('Invalid email format');\n}\n\nif (errors.length > 0) {\n  return [{ json: { valid: false, errors, data: null }}];\n}\n\n// Name parsing with edge case handling\nconst nameStr = body.data.name?.trim() || 'Unknown';\nconst nameParts = nameStr.split(/\\s+/);\nconst firstName = nameParts[0];\nconst lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';\n\n// Format arrays for note\nconst formatArray = (arr) => {\n  if (!Array.isArray(arr) || arr.length === 0) return 'None specified';\n  return arr.join(', ');\n};\n\n// Sanitize string inputs\nconst sanitize = (str) => {\n  if (!str) return 'Not specified';\n  return str.replace(/[<>]/g, '').substring(0, 1000);\n};\n\nreturn [{\n  json: {\n    valid: true,\n    person: {\n      firstName: sanitize(firstName),\n      lastName: sanitize(lastName),\n      email: body.data.email.toLowerCase().trim(),\n      jobTitle: sanitize(body.data.role)\n    },\n    company: {\n      name: sanitize(body.data.company) || 'Unknown Company'\n    },\n    note: {\n      title: `Consultation: ${sanitize(body.data.company) || 'Unknown'}`,\n      message: sanitize(body.data.message),\n      teamSize: sanitize(body.data.teamSize),\n      techStack: formatArray(body.data.techStack),\n      securityLevel: sanitize(body.data.securityLevel),\n      compliance: formatArray(body.data.compliance)\n    }\n  }\n}];"
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Validate and Process",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "validation-check",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "b2c3d4e5-f6a7-8901-bcde-f23456789012",
+      "name": "Validation Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.zaplit.com/rest/people",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": {\n    \"firstName\": \"{{ $json.person.firstName }}\",\n    \"lastName\": \"{{ $json.person.lastName }}\"\n  },\n  \"emails\": [\n    {\n      \"email\": \"{{ $json.person.email }}\",\n      \"isPrimary\": true\n    }\n  ],\n  \"jobTitle\": \"{{ $json.person.jobTitle }}\"\n}",
+        "options": {}
+      },
+      "id": "e38c4ac7-51ca-4951-9559-058240c3c8c6",
+      "name": "Create Person",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "header-auth-twenty-crm",
+          "name": "Twenty CRM Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.zaplit.com/rest/companies",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $json.company.name }}\"\n}",
+        "options": {}
+      },
+      "id": "708ba8c3-8715-4afc-97a6-c05bd2957da8",
+      "name": "Create Company",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "header-auth-twenty-crm",
+          "name": "Twenty CRM Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "mergeByPosition"
+      },
+      "id": "c3d4e5f6-a7b8-9012-cdef-345678901234",
+      "name": "Merge Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [1300, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract IDs from CRM responses\nconst input = $input.first().json;\n\n// Person data from Create Person response (input[0])\nconst personData = input[0];\nconst personId = personData?.data?.id;\n\n// Company data from Create Company response (input[1])\nconst companyData = input[1];\nconst companyId = companyData?.data?.id;\n\n// Original form data (stored in input[0] from previous nodes)\nconst formData = $input.all()[0].json;\n\nreturn [{\n  json: {\n    personId: personId,\n    companyId: companyId,\n    person: formData.person,\n    company: formData.company,\n    note: formData.note\n  }\n}];"
+      },
+      "id": "d4e5f6a7-b8c9-0123-defa-456789012345",
+      "name": "Extract IDs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1520, 300]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://crm.zaplit.com/rest/people/{{ $json.personId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"company\": \"{{ $json.companyId }}\"\n}",
+        "options": {}
+      },
+      "id": "e5f6a7b8-c9d0-1234-efab-567890123456",
+      "name": "Link Person to Company",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1740, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "header-auth-twenty-crm",
+          "name": "Twenty CRM Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.zaplit.com/rest/notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"title\": \"{{ $json.note.title }}\",\n  \"body\": \"👤 Contact: {{ $json.person.firstName }} {{ $json.person.lastName }}\\n📧 Email: {{ $json.person.email }}\\n💼 Role: {{ $json.person.jobTitle }}\\n\\n👥 Team Size: {{ $json.note.teamSize }}\\n🔒 Security Level: {{ $json.note.securityLevel }}\\n📋 Compliance: {{ $json.note.compliance }}\\n\\n🛠️ Tech Stack:\\n{{ $json.note.techStack }}\\n\\n💬 Message:\\n{{ $json.note.message }}\",\n  \"person\": \"{{ $json.personId }}\",\n  \"company\": \"{{ $json.companyId }}\"\n}",
+        "options": {}
+      },
+      "id": "f6a7b8c9-d0e1-2345-fabc-678901234567",
+      "name": "Create Note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1960, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "header-auth-twenty-crm",
+          "name": "Twenty CRM Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"message\": \"Thank you for your submission! We'll be in touch soon.\"\n}",
+        "options": {}
+      },
+      "id": "2747FDC4-C12A-4E52-AAB7-22848D30BFF7",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2180, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": {{ JSON.stringify($json.errors) }}\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "a7b8c9d0-e1f2-3456-abcd-789012345678",
+      "name": "Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1080, 600]
+    }
+  ],
+  "connections": {
+    "Consultation Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate and Process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate and Process": {
+      "main": [
+        [
+          {
+            "node": "Validation Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validation Check": {
+      "main": [
+        [
+          {
+            "node": "Create Person",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Company",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Person": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Company": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Results": {
+      "main": [
+        [
+          {
+            "node": "Extract IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract IDs": {
+      "main": [
+        [
+          {
+            "node": "Link Person to Company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Link Person to Company": {
+      "main": [
+        [
+          {
+            "node": "Create Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Note": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [],
+  "pinData": {}
+}

@@ -1,0 +1,77 @@
+groups:
+  - name: n8n-critical
+    interval: 15s
+    rules:
+      - alert: N8nDown
+        expr: up{job="n8n"} == 0
+        for: 1m
+        labels:
+          severity: p0
+          service: n8n
+        annotations:
+          summary: "n8n is down"
+          description: "n8n instance has been down for more than 1 minute"
+          runbook_url: "https://wiki.internal/runbooks/n8n-down"
+      
+      - alert: HighErrorRate
+        expr: rate(n8n_execution_failed_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: p0
+          service: n8n
+        annotations:
+          summary: "High error rate detected in n8n executions"
+          description: "Error rate is above 10% for more than 2 minutes"
+      
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: p1
+          service: infrastructure
+        annotations:
+          summary: "Disk space below 10%"
+          description: "Filesystem {{ $labels.device }} on {{ $labels.instance }} has less than 10% space remaining"
+      
+      - alert: MemoryHigh
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.85
+        for: 5m
+        labels:
+          severity: p1
+          service: infrastructure
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is above 85% for more than 5 minutes"
+      
+      - alert: CPUHigh
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: p1
+          service: infrastructure
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is above 80% for more than 5 minutes"
+
+  - name: n8n-warnings
+    interval: 30s
+    rules:
+      - alert: N8nHighExecutionQueue
+        expr: n8n_execution_queue_size > 100
+        for: 5m
+        labels:
+          severity: p2
+          service: n8n
+        annotations:
+          summary: "n8n execution queue is building up"
+          description: "Execution queue size is {{ $value }} for more than 5 minutes"
+      
+      - alert: PrometheusTargetMissing
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: p2
+          service: monitoring
+        annotations:
+          summary: "Prometheus target is missing"
+          description: "Target {{ $labels.instance }} of job {{ $labels.job }} has been down for more than 5 minutes"

@@ -1,0 +1,334 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9'
+
+jobs:
+  # Detect which apps/files changed
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      zaplit-com: ${{ steps.filter.outputs.zaplit-com }}
+      zaplit-org: ${{ steps.filter.outputs.zaplit-org }}
+      shared: ${{ steps.filter.outputs.shared }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check for file changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            zaplit-com:
+              - 'zaplit-com/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+            zaplit-org:
+              - 'zaplit-org/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+            shared:
+              - '.github/workflows/**'
+              - '*.config.*'
+              - 'tsconfig*.json'
+
+  # Install dependencies and cache
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        id: node-modules-cache
+        with:
+          path: |
+            node_modules
+            zaplit-com/node_modules
+            zaplit-org/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('pnpm-lock.yaml') }}
+
+  # Type checking
+  typecheck:
+    runs-on: ubuntu-latest
+    needs: [install, changes]
+    if: ${{ needs.changes.outputs.zaplit-com == 'true' || needs.changes.outputs.zaplit-org == 'true' || needs.changes.outputs.shared == 'true' || github.event_name == 'push' }}
+    strategy:
+      matrix:
+        app: [com, org]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            zaplit-com/node_modules
+            zaplit-org/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('pnpm-lock.yaml') }}
+      
+      - name: Type check zaplit-${{ matrix.app }}
+        run: pnpm typecheck:${{ matrix.app }}
+
+  # Linting
+  lint:
+    runs-on: ubuntu-latest
+    needs: [install, changes]
+    if: ${{ needs.changes.outputs.zaplit-com == 'true' || needs.changes.outputs.zaplit-org == 'true' || needs.changes.outputs.shared == 'true' || github.event_name == 'push' }}
+    strategy:
+      matrix:
+        app: [com, org]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            zaplit-com/node_modules
+            zaplit-org/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('pnpm-lock.yaml') }}
+      
+      - name: Lint zaplit-${{ matrix.app }}
+        run: pnpm lint:${{ matrix.app }}
+
+  # Unit tests with Vitest
+  unit-tests:
+    runs-on: ubuntu-latest
+    needs: [install, changes]
+    if: ${{ needs.changes.outputs.zaplit-com == 'true' || needs.changes.outputs.shared == 'true' || github.event_name == 'push' }}
+    strategy:
+      matrix:
+        app: [com]
+        # Add 'org' when tests are added to zaplit-org
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            zaplit-com/node_modules
+            zaplit-org/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('pnpm-lock.yaml') }}
+      
+      - name: Run unit tests for zaplit-${{ matrix.app }}
+        run: pnpm test:${{ matrix.app }}
+      
+      - name: Upload coverage report
+        if: matrix.app == 'com'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ matrix.app }}
+          path: zaplit-${{ matrix.app }}/coverage/
+          retention-days: 7
+
+  # Build both apps
+  build:
+    runs-on: ubuntu-latest
+    needs: [install, changes, typecheck, lint]
+    if: ${{ always() && (needs.typecheck.result == 'success' && needs.lint.result == 'success') }}
+    strategy:
+      matrix:
+        app: [com, org]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            zaplit-com/node_modules
+            zaplit-org/node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('pnpm-lock.yaml') }}
+      
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            zaplit-${{ matrix.app }}/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ matrix.app }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('zaplit-${{ matrix.app }}/**/*.ts', 'zaplit-${{ matrix.app }}/**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ matrix.app }}-${{ hashFiles('pnpm-lock.yaml') }}-
+      
+      - name: Build zaplit-${{ matrix.app }}
+        run: pnpm build:${{ matrix.app }}
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.app }}
+          path: |
+            zaplit-${{ matrix.app }}/.next/
+            zaplit-${{ matrix.app }}/dist/
+          retention-days: 7
+
+  # E2E tests with Playwright (conditional)
+  e2e-tests:
+    runs-on: ubuntu-latest
+    needs: [build, changes]
+    # Run on PRs to main, push to main, or when e2e tests are explicitly requested
+    if: |
+      always() && 
+      needs.build.result == 'success' && 
+      (
+        github.base_ref == 'main' || 
+        github.ref == 'refs/heads/main' || 
+        contains(github.event.head_commit.message, '[e2e]') ||
+        needs.changes.outputs.zaplit-com == 'true'
+      )
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            zaplit-com/node_modules
+            zaplit-org/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('pnpm-lock.yaml') }}
+      
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      
+      - name: Download build artifacts (zaplit-com)
+        uses: actions/download-artifact@v4
+        with:
+          name: build-com
+          path: zaplit-com/.next/
+      
+      - name: Run Playwright tests
+        run: pnpm test:e2e
+        env:
+          CI: true
+          PLAYWRIGHT_JSON_OUTPUT_NAME: playwright-report.json
+      
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  # Summary job to report overall status
+  ci-summary:
+    runs-on: ubuntu-latest
+    needs: [typecheck, lint, unit-tests, build, e2e-tests]
+    if: always()
+    steps:
+      - name: CI Summary
+        run: |
+          echo "## CI Workflow Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Type Check | ${{ needs.typecheck.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests | ${{ needs.e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.typecheck.result }}" == "success" && \
+                "${{ needs.lint.result }}" == "success" && \
+                "${{ needs.unit-tests.result }}" == "success" && \
+                "${{ needs.build.result }}" == "success" ]]; then
+            echo "✅ **All required checks passed!**" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          else
+            echo "❌ **Some checks failed!**" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi

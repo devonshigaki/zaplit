@@ -1,0 +1,237 @@
+{
+  "name": "Security Monitoring - Failed Authentication Detection",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "security-events",
+        "responseMode": "immediately"
+      },
+      "id": "security-webhook",
+      "name": "Security Events Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize security event data\nconst event = $input.body;\n\nreturn [{\n  json: {\n    eventType: event.type || 'unknown',\n    sourceIp: event.ip || $input.headers['x-forwarded-for'] || 'unknown',\n    userAgent: event.userAgent || $input.headers['user-agent'] || 'unknown',\n    timestamp: event.timestamp || new Date().toISOString(),\n    details: event.details || {},\n    service: event.service || 'n8n',\n    severity: event.severity || 'low'\n  }\n}];"
+      },
+      "id": "normalize-event",
+      "name": "Normalize Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "value": "={{ $json.eventType }}",
+              "conditions": [
+                {
+                  "value": "failed_auth",
+                  "operator": "equals"
+                }
+              ]
+            },
+            {
+              "value": "={{ $json.eventType }}",
+              "conditions": [
+                {
+                  "value": "rate_limit_exceeded",
+                  "operator": "equals"
+                }
+              ]
+            },
+            {
+              "value": "={{ $json.eventType }}",
+              "conditions": [
+                {
+                  "value": "api_error",
+                  "operator": "equals"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "id": "route-event",
+      "name": "Route Event Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check for multiple failed attempts from same IP\nconst currentEvent = $input.json;\nconst windowMinutes = 5;\nconst threshold = 5;\n\n// This would typically query a database for recent events\n// For demo purposes, using static check\n\n// Store event in database/memory for tracking\nconst eventKey = `failed_auth:${currentEvent.sourceIp}`;\n\n// Simulated check - in production, query Redis/Database\nconst recentAttempts = 1; // Would be fetched from storage\n\nreturn [{\n  json: {\n    ...currentEvent,\n    isBruteForceAttempt: recentAttempts >= threshold,\n    attemptCount: recentAttempts,\n    windowMinutes: windowMinutes,\n    requiresAlert: recentAttempts >= threshold || currentEvent.severity === 'high'\n  }\n}];"
+      },
+      "id": "check-brute-force",
+      "name": "Check Brute Force",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 100]
+    },
+    {
+      "parameters": {
+        "channel": "={{ process.env.SLACK_SECURITY_CHANNEL }}",
+        "text": "🚨 Security Alert: Multiple Failed Authentication Attempts",
+        "blocks": [
+          {
+            "type": "header",
+            "text": {
+              "type": "plain_text",
+              "text": "🚨 Security Alert"
+            }
+          },
+          {
+            "type": "section",
+            "fields": [
+              {
+                "type": "mrkdwn",
+                "text": "*Event Type:*\n{{ $json.eventType }}"
+              },
+              {
+                "type": "mrkdwn",
+                "text": "*Source IP:*\n{{ $json.sourceIp }}"
+              },
+              {
+                "type": "mrkdwn",
+                "text": "*Attempts:*\n{{ $json.attemptCount }}"
+              },
+              {
+                "type": "mrkdwn",
+                "text": "*Time Window:*\n{{ $json.windowMinutes }} minutes"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*Timestamp:* {{ $json.timestamp }}"
+            }
+          }
+        ]
+      },
+      "id": "slack-alert",
+      "name": "Send Slack Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [1050, 100]
+    },
+    {
+      "parameters": {
+        "resource": "database",
+        "operation": "insert",
+        "table": "security_events",
+        "columns": "event_type,source_ip,user_agent,timestamp,details,severity",
+        "values": "={{ $json.eventType }},{{ $json.sourceIp }},{{ $json.userAgent }},{{ $json.timestamp }},{{ JSON.stringify($json.details) }},{{ $json.severity }}"
+      },
+      "id": "log-to-db",
+      "name": "Log to Security Database",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "subject": "Security Alert: {{ $json.eventType }}",
+        "text": "Security Event Details:\n\nEvent Type: {{ $json.eventType }}\nSource IP: {{ $json.sourceIp }}\nTimestamp: {{ $json.timestamp }}\nSeverity: {{ $json.severity }}\n\nDetails: {{ JSON.stringify($json.details, null, 2) }}",
+        "to": "={{ process.env.SECURITY_TEAM_EMAIL }}"
+      },
+      "id": "email-alert",
+      "name": "Email Security Team",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Security Events Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Event": {
+      "main": [
+        [
+          {
+            "node": "Route Event Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Event Type": {
+      "main": [
+        [
+          {
+            "node": "Check Brute Force",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Security Team",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Security Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Brute Force": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Slack Alert": {
+      "main": [
+        [
+          {
+            "node": "Log to Security Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Security Team": {
+      "main": [
+        [
+          {
+            "node": "Log to Security Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": ["security", "monitoring", "alerting"]
+}

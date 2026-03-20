@@ -16,6 +16,7 @@ export default function ContactPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    company: "",
     subject: "",
     message: "",
   })
@@ -149,6 +150,15 @@ export default function ContactPage() {
                       required 
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Company</label>
+                    <Input 
+                      placeholder="Your company" 
+                      value={formData.company}
+                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                       disabled={isSubmitting}
                     />
                   </div>

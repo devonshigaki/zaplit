@@ -1,63 +1,41 @@
 # Security
 
-> **Security policies and procedures**
+## Policies
 
-## Overview
+### Secrets
+- Never commit secrets to git
+- Use Google Secret Manager in production
+- Rotate secrets every 90 days
 
-Defense in depth:
+### Forms
+- Rate limiting: 10 requests/minute per IP
+- Input validation with Zod
+- IP hashing for privacy
 
-```
-DNS/Edge (Cloudflare) → Network (GCP VPC) → Application (Next.js) → Container → Secrets
-```
-
-## Form Security
-
-| Measure | Implementation |
-|---------|---------------|
-| Rate Limiting | 5 req/min per IP |
-| Input Validation | Zod schemas |
-| Webhook Security | HMAC signature |
-| HTTPS | Enforced |
-
-## Rate Limiting
-
-```typescript
-const RATE_LIMIT = new Map<string, number[]>();
-const WINDOW = 60 * 1000; // 1 min
-const MAX = 5;
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const requests = RATE_LIMIT.get(ip) || [];
-  const valid = requests.filter(t => now - t < WINDOW);
-  
-  if (valid.length >= MAX) return false;
-  
-  valid.push(now);
-  RATE_LIMIT.set(ip, valid);
-  return true;
-}
-```
-
-## Secrets
-
-Production secrets in Google Secret Manager:
-
-| Secret | Used By |
-|--------|---------|
-| `n8n-webhook-secret` | zaplit-com |
-| `n8n-webhook-consultation` | zaplit-com |
-| `n8n-webhook-contact` | zaplit-com |
+### API
+- Webhook signature validation
+- CORS restricted to known origins
+- HTTPS only
 
 ## Reporting
 
-Report security issues to: **security@zaplit.com**
+Report security issues to: security@zaplit.com
 
 Include:
-- Detailed description
+- Description
 - Steps to reproduce
-- Potential impact
+- Impact assessment
+- Suggested fix (optional)
 
----
+## Compliance
 
-**© 2026 Zaplit. All Rights Reserved.**
+- GDPR: Data retention 2 years
+- Form data encrypted in transit and at rest
+- Right to deletion supported
+
+## Infrastructure
+
+- Cloud Run: Private services, IAM-controlled
+- VMs: Firewall restricted to specific IPs
+- Secrets: Secret Manager with versioning
+- Backups: Encrypted GCS buckets

@@ -1,0 +1,448 @@
+- generic [ref=e3]:
+  - main [ref=e4]:
+    - generic [ref=e301]:
+      - generic [ref=e304]:
+        - generic [ref=e306]:
+          - generic [ref=e309]:
+            - link "Personal" [ref=e311] [cursor=pointer]:
+              - /url: /projects/Oy2TRFMRL2ksHQXh
+              - generic [ref=e313]:
+                - generic "Personal" [ref=e314]:
+                  - img [ref=e315]
+                - generic "Personal" [ref=e319]
+            - generic [ref=e320]: /
+            - generic "Consultation Form to CRM - v2 Fixed" [ref=e766]:
+              - generic [ref=e323] [cursor=pointer]: Consultation Form to CRM - v2 Fixed
+          - generic [ref=e325]: + Add tag
+          - generic [ref=e327]:
+            - generic [ref=e329]:
+              - button "Publish" [disabled] [ref=e331]:
+                - generic [ref=e335]: Publish
+              - button "More actions" [ref=e338] [cursor=pointer]:
+                - img [ref=e340]
+            - link "Version History" [ref=e1206] [cursor=pointer]:
+              - /url: /workflow/129F205D-3954-4E94-AFB7-4746F4C8D83A/history
+              - button "Version History" [ref=e1207]:
+                - img [ref=e1209]
+            - button "Actions" [ref=e353] [cursor=pointer]:
+              - img [ref=e355]
+        - radiogroup [ref=e365]:
+          - radio "Editor" [checked] [ref=e366]:
+            - generic [ref=e367] [cursor=pointer]: Editor
+          - radio "Executions" [ref=e368]:
+            - generic [ref=e369] [cursor=pointer]: Executions
+          - radio "Evaluations" [ref=e370]:
+            - generic [ref=e371] [cursor=pointer]: Evaluations
+      - complementary [ref=e372]:
+        - generic [ref=e373]:
+          - generic [ref=e375]:
+            - link [ref=e376] [cursor=pointer]:
+              - /url: /home
+              - generic [ref=e377]:
+                - img [ref=e378]
+                - img [ref=e380]
+            - menubar [ref=e383]:
+              - menuitem "Add new item" [ref=e384]:
+                - button "Add new item" [ref=e386] [cursor=pointer]:
+                  - img [ref=e388]
+            - button "Open command palette" [ref=e391] [cursor=pointer]:
+              - img [ref=e393]
+            - button "Toggle sidebar" [ref=e398] [cursor=pointer]:
+              - img [ref=e400]
+          - generic [ref=e408]:
+            - menuitem "Overview" [ref=e410] [cursor=pointer]:
+              - img [ref=e412]
+              - generic [ref=e417]: Overview
+            - menuitem "Chat" [ref=e419] [cursor=pointer]:
+              - img [ref=e421]
+              - generic [ref=e423]:
+                - generic [ref=e424]: Chat
+                - generic [ref=e425]: beta
+          - generic [ref=e427]:
+            - menuitem "Templates" [ref=e429] [cursor=pointer]:
+              - img [ref=e431]
+              - generic [ref=e437]: Templates
+            - menuitem "Insights" [ref=e439] [cursor=pointer]:
+              - img [ref=e441]
+              - generic [ref=e444]: Insights
+            - menuitem "Help" [ref=e446] [cursor=pointer]:
+              - img [ref=e448]
+              - generic [ref=e453]: Help
+              - img [ref=e454]
+            - menuitem "Settings" [ref=e457] [cursor=pointer]:
+              - img [ref=e459]
+              - generic [ref=e464]: Settings
+              - img [ref=e465]
+      - main [ref=e467]:
+        - generic [ref=e470]:
+          - generic [ref=e472]:
+            - generic [ref=e474]:
+              - generic:
+                - img
+                - img:
+                  - group "Edge from ED6E0A75-011D-4066-8BC9-2C6569A3C8E0 to 2747FDC4-C12A-4E52-AAB7-22848D30BFF7":
+                    - img
+                - img:
+                  - group "Edge from ED6E0A75-011D-4066-8BC9-2C6569A3C8E0 to e38c4ac7-51ca-4951-9559-058240c3c8c6" [ref=e475] [cursor=pointer]:
+                    - img
+                - img:
+                  - group "Edge from e38c4ac7-51ca-4951-9559-058240c3c8c6 to 708ba8c3-8715-4afc-97a6-c05bd2957da8":
+                    - img
+                - img:
+                  - group "Edge from d7af158d-c58c-4de3-94d0-43daa441883d to ebb9edff-9569-48d6-8f49-6902d1e26264":
+                    - img
+                - img:
+                  - group "Edge from ebb9edff-9569-48d6-8f49-6902d1e26264 to 6d81122d-8269-46aa-85c7-5d6abfb2e387" [ref=e771] [cursor=pointer]:
+                    - img
+                - img:
+                  - group "Edge from ebb9edff-9569-48d6-8f49-6902d1e26264 to acc9569b-5349-40b9-9979-29b591c37a17" [ref=e775] [cursor=pointer]:
+                    - img
+                - img:
+                  - group "Edge from ebb9edff-9569-48d6-8f49-6902d1e26264 to a8ce6f7e-b0e3-4e13-9f0b-6ddbf9c3f55e" [ref=e779] [cursor=pointer]:
+                    - img
+                - img:
+                  - group "Edge from 6d81122d-8269-46aa-85c7-5d6abfb2e387 to d15b5d84-62a6-4836-a507-311478179074" [ref=e783] [cursor=pointer]:
+                    - img
+                - img:
+                  - group "Edge from acc9569b-5349-40b9-9979-29b591c37a17 to d15b5d84-62a6-4836-a507-311478179074" [ref=e787] [cursor=pointer]:
+                    - img
+                - img:
+                  - group "Edge from d15b5d84-62a6-4836-a507-311478179074 to 3ca5b70c-cf82-4b67-8584-af395a5b5727":
+                    - img
+                - img:
+                  - group "Edge from 3ca5b70c-cf82-4b67-8584-af395a5b5727 to 628759ac-350d-49f9-83f9-67abc30092ac":
+                    - img
+                - img:
+                  - group "Edge from 628759ac-350d-49f9-83f9-67abc30092ac to b954cca6-b7e5-4de4-9c3a-f5b41b4f04ee":
+                    - img
+                - img:
+                  - group "Edge from b954cca6-b7e5-4de4-9c3a-f5b41b4f04ee to 4145a393-1e43-4359-8e51-f009544fce5c":
+                    - img
+                - img:
+                  - group "Edge from 554d3873-b5d7-4f28-8603-8cbbf44b5e31 to d7af158d-c58c-4de3-94d0-43daa441883d":
+                    - img
+                - generic [ref=e791]:
+                  - button "Add node" [ref=e794] [cursor=pointer]:
+                    - img [ref=e796]
+                  - button "Delete connection" [ref=e800] [cursor=pointer]:
+                    - img [ref=e802]
+                - generic:
+                  - group [ref=e492] [cursor=pointer]:
+                    - generic [ref=e493]:
+                      - generic [ref=e496]: POST
+                      - generic [ref=e499]:
+                        - button "Execute step" [ref=e500]:
+                          - img [ref=e502]
+                        - button "Deactivate" [ref=e504]:
+                          - img [ref=e506]
+                        - button "Delete" [ref=e509]:
+                          - img [ref=e511]
+                        - button "More actions" [ref=e513]:
+                          - img [ref=e515]
+                      - generic [ref=e517]:
+                        - generic [ref=e520]:
+                          - img
+                        - generic:
+                          - generic: Consultation Webhook
+                      - generic:
+                        - generic:
+                          - generic:
+                            - img
+                          - button "Execute workflow":
+                            - generic:
+                              - img
+                              - generic: Execute workflow
+                  - group [ref=e521] [cursor=pointer]:
+                    - generic [ref=e522]:
+                      - img [ref=e528]
+                      - generic [ref=e536]:
+                        - button "Execute step" [ref=e537]:
+                          - img [ref=e539]
+                        - button "Deactivate" [ref=e541]:
+                          - img [ref=e543]
+                        - button "Delete" [ref=e546]:
+                          - img [ref=e548]
+                        - button "More actions" [ref=e550]:
+                          - img [ref=e552]
+                      - generic [ref=e554]:
+                        - generic [ref=e557]:
+                          - img
+                        - generic:
+                          - generic: Success Response
+                  - group [ref=e558] [cursor=pointer]:
+                    - generic [ref=e559]:
+                      - generic [ref=e568]:
+                        - button "Execute step" [ref=e569]:
+                          - img [ref=e571]
+                        - button "Deactivate" [ref=e573]:
+                          - img [ref=e575]
+                        - button "Delete" [ref=e578]:
+                          - img [ref=e580]
+                        - button "More actions" [ref=e582]:
+                          - img [ref=e584]
+                      - generic [ref=e586]:
+                        - generic [ref=e589]:
+                          - img
+                        - generic:
+                          - generic: HTTP Request
+                          - generic: "POST: https://crm.zaplit.com/rest/people"
+                  - group [ref=e590] [cursor=pointer]:
+                    - generic [ref=e591]:
+                      - img [ref=e597]
+                      - generic [ref=e605]:
+                        - button "Execute step" [ref=e606]:
+                          - img [ref=e608]
+                        - button "Deactivate" [ref=e610]:
+                          - img [ref=e612]
+                        - button "Delete" [ref=e615]:
+                          - img [ref=e617]
+                        - button "More actions" [ref=e619]:
+                          - img [ref=e621]
+                      - generic [ref=e623]:
+                        - generic [ref=e626]:
+                          - img
+                        - generic:
+                          - generic: HTTP Request1
+                          - generic: "POST: https://crm.zaplit.com/rest/companies"
+                  - group [ref=e804] [cursor=pointer]:
+                    - generic [ref=e805]:
+                      - generic [ref=e814]:
+                        - button "Execute step" [ref=e815]:
+                          - img [ref=e817]
+                        - button "Deactivate" [ref=e819]:
+                          - img [ref=e821]
+                        - button "Delete" [ref=e824]:
+                          - img [ref=e826]
+                        - button "More actions" [ref=e828]:
+                          - img [ref=e830]
+                      - generic [ref=e832]:
+                        - generic [ref=e835]:
+                          - img
+                        - generic:
+                          - generic: Validate and Process
+                  - group [ref=e836] [cursor=pointer]:
+                    - generic [ref=e837]:
+                      - generic [ref=e840]: "true"
+                      - generic [ref=e845]: "false"
+                      - generic [ref=e852]:
+                        - button "Execute step" [ref=e853]:
+                          - img [ref=e855]
+                        - button "Deactivate" [ref=e857]:
+                          - img [ref=e859]
+                        - button "Delete" [ref=e862]:
+                          - img [ref=e864]
+                        - button "More actions" [ref=e866]:
+                          - img [ref=e868]
+                      - generic [ref=e870]:
+                        - generic [ref=e873]:
+                          - img
+                        - generic:
+                          - generic: Validation Check
+                  - group [active] [ref=e874] [cursor=pointer]:
+                    - generic [ref=e875]:
+                      - generic [ref=e884]:
+                        - button "Execute step" [ref=e885]:
+                          - img [ref=e887]
+                        - button "Deactivate" [ref=e889]:
+                          - img [ref=e891]
+                        - button "Delete" [ref=e894]:
+                          - img [ref=e896]
+                        - button "More actions" [ref=e898]:
+                          - img [ref=e900]
+                      - generic [ref=e902]:
+                        - generic [ref=e905]:
+                          - img
+                        - generic:
+                          - generic: Create Person
+                          - generic: "POST: https://crm.zaplit.com/rest/people"
+                        - img [ref=e908]
+                  - group [ref=e910] [cursor=pointer]:
+                    - generic [ref=e911]:
+                      - generic [ref=e920]:
+                        - button "Execute step" [ref=e921]:
+                          - img [ref=e923]
+                        - button "Deactivate" [ref=e925]:
+                          - img [ref=e927]
+                        - button "Delete" [ref=e930]:
+                          - img [ref=e932]
+                        - button "More actions" [ref=e934]:
+                          - img [ref=e936]
+                      - generic [ref=e938]:
+                        - generic [ref=e941]:
+                          - img
+                        - generic:
+                          - generic: Create Company
+                          - generic: "POST: https://crm.zaplit.com/rest/companies"
+                        - img [ref=e944]
+                  - group [ref=e946] [cursor=pointer]:
+                    - generic [ref=e947]:
+                      - generic [ref=e954]: Input 1
+                      - generic [ref=e959]: Input 2
+                      - generic [ref=e962]:
+                        - button "Execute step" [ref=e963]:
+                          - img [ref=e965]
+                        - button "Deactivate" [ref=e967]:
+                          - img [ref=e969]
+                        - button "Delete" [ref=e972]:
+                          - img [ref=e974]
+                        - button "More actions" [ref=e976]:
+                          - img [ref=e978]
+                      - generic [ref=e980]:
+                        - generic [ref=e983]:
+                          - img
+                        - generic:
+                          - generic: Merge Results
+                          - generic: mergeByPosition
+                  - group [ref=e984] [cursor=pointer]:
+                    - generic [ref=e985]:
+                      - generic [ref=e994]:
+                        - button "Execute step" [ref=e995]:
+                          - img [ref=e997]
+                        - button "Deactivate" [ref=e999]:
+                          - img [ref=e1001]
+                        - button "Delete" [ref=e1004]:
+                          - img [ref=e1006]
+                        - button "More actions" [ref=e1008]:
+                          - img [ref=e1010]
+                      - generic [ref=e1012]:
+                        - generic [ref=e1015]:
+                          - img
+                        - generic:
+                          - generic: Extract IDs
+                  - group [ref=e1016] [cursor=pointer]:
+                    - generic [ref=e1017]:
+                      - generic [ref=e1026]:
+                        - button "Execute step" [ref=e1027]:
+                          - img [ref=e1029]
+                        - button "Deactivate" [ref=e1031]:
+                          - img [ref=e1033]
+                        - button "Delete" [ref=e1036]:
+                          - img [ref=e1038]
+                        - button "More actions" [ref=e1040]:
+                          - img [ref=e1042]
+                      - generic [ref=e1044]:
+                        - generic [ref=e1047]:
+                          - img
+                        - generic:
+                          - generic: Link Person to Company
+                        - img [ref=e1050]
+                  - group [ref=e1052] [cursor=pointer]:
+                    - generic [ref=e1053]:
+                      - generic [ref=e1062]:
+                        - button "Execute step" [ref=e1063]:
+                          - img [ref=e1065]
+                        - button "Deactivate" [ref=e1067]:
+                          - img [ref=e1069]
+                        - button "Delete" [ref=e1072]:
+                          - img [ref=e1074]
+                        - button "More actions" [ref=e1076]:
+                          - img [ref=e1078]
+                      - generic [ref=e1080]:
+                        - generic [ref=e1083]:
+                          - img
+                        - generic:
+                          - generic: Create Note
+                          - generic: "POST: https://crm.zaplit.com/rest/notes"
+                        - img [ref=e1086]
+                  - group [ref=e1088] [cursor=pointer]:
+                    - generic [ref=e1089]:
+                      - img [ref=e1095]
+                      - generic [ref=e1103]:
+                        - button "Execute step" [ref=e1104]:
+                          - img [ref=e1106]
+                        - button "Deactivate" [ref=e1108]:
+                          - img [ref=e1110]
+                        - button "Delete" [ref=e1113]:
+                          - img [ref=e1115]
+                        - button "More actions" [ref=e1117]:
+                          - img [ref=e1119]
+                      - generic [ref=e1121]:
+                        - generic [ref=e1124]:
+                          - img
+                        - generic:
+                          - generic: Validation Error
+                  - group [ref=e1125] [cursor=pointer]:
+                    - generic [ref=e1126]:
+                      - generic [ref=e1129]: POST
+                      - generic [ref=e1132]:
+                        - button "Execute step" [ref=e1133]:
+                          - img [ref=e1135]
+                        - button "Deactivate" [ref=e1137]:
+                          - img [ref=e1139]
+                        - button "Delete" [ref=e1142]:
+                          - img [ref=e1144]
+                        - button "More actions" [ref=e1146]:
+                          - img [ref=e1148]
+                      - generic [ref=e1150]:
+                        - generic [ref=e1153]:
+                          - img
+                        - generic:
+                          - generic: Consultation Webhook1
+                      - generic:
+                        - generic:
+                          - generic:
+                            - img
+                          - button "Execute workflow":
+                            - generic:
+                              - img
+                              - generic: Execute workflow
+                  - group [ref=e1154] [cursor=pointer]:
+                    - generic [ref=e1155]:
+                      - img [ref=e1161]
+                      - generic [ref=e1169]:
+                        - button "Execute step" [ref=e1170]:
+                          - img [ref=e1172]
+                        - button "Deactivate" [ref=e1174]:
+                          - img [ref=e1176]
+                        - button "Delete" [ref=e1179]:
+                          - img [ref=e1181]
+                        - button "More actions" [ref=e1183]:
+                          - img [ref=e1185]
+                      - generic [ref=e1187]:
+                        - generic [ref=e1190]:
+                          - img
+                        - generic:
+                          - generic: Success Response1
+            - img [ref=e627]
+            - img [ref=e628]
+            - generic [ref=e630]:
+              - button "Zoom to Fit" [ref=e632] [cursor=pointer]:
+                - img [ref=e634]
+              - button "Zoom In" [ref=e637] [cursor=pointer]:
+                - img [ref=e639]
+              - button "Zoom Out" [ref=e644] [cursor=pointer]:
+                - img [ref=e646]
+              - button "Reset Zoom" [ref=e1192] [cursor=pointer]:
+                - img [ref=e1194]
+              - button "Tidy Up" [ref=e651] [cursor=pointer]:
+                - img [ref=e653]
+          - generic [ref=e656]:
+            - button "Execute workflow" [ref=e658] [cursor=pointer]:
+              - generic [ref=e659]:
+                - img [ref=e660]
+                - generic [ref=e662]:
+                  - text: Execute workflow
+                  - generic [ref=e1198]:
+                    - text: from
+                    - generic [ref=e1199]: Consultation Webhook1
+            - button "Select trigger node" [ref=e1202] [cursor=pointer]:
+              - img [ref=e1204]
+          - generic [ref=e663]:
+            - button "Open nodes panel" [ref=e665] [cursor=pointer]:
+              - img [ref=e667]
+            - button "Command bar" [ref=e670] [cursor=pointer]:
+              - img [ref=e672]
+            - button "Add sticky note" [ref=e677] [cursor=pointer]:
+              - img [ref=e679]
+            - button "Open focus panel" [ref=e684] [cursor=pointer]:
+              - img [ref=e686]
+          - generic:
+            - complementary
+        - generic [ref=e698] [cursor=pointer]:
+          - generic [ref=e699]: Logs
+          - generic [ref=e701]:
+            - button "Pop out panel" [ref=e703]:
+              - img [ref=e705]
+            - button "Open panel" [ref=e708]:
+              - img [ref=e710]
+  - complementary

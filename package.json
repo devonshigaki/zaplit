@@ -2,7 +2,7 @@
   "name": "zaplit",
   "version": "1.0.0",
   "private": true,
-  "description": "Zaplit website monorepo",
+  "description": "Zaplit - AI agent teams deployment platform",
   "engines": {
     "node": ">=18.0.0",
     "pnpm": ">=8.0.0"
@@ -13,32 +13,36 @@
     "build": "pnpm build:com && pnpm build:org",
     "build:com": "cd zaplit-com && pnpm build",
     "build:org": "cd zaplit-org && pnpm build",
+    "start:com": "cd zaplit-com && pnpm start",
+    "start:org": "cd zaplit-org && pnpm start",
     "typecheck": "pnpm typecheck:com && pnpm typecheck:org",
-    "typecheck:com": "cd zaplit-com && tsc --noEmit",
-    "typecheck:org": "cd zaplit-org && tsc --noEmit",
+    "typecheck:com": "cd zaplit-com && pnpm typecheck",
+    "typecheck:org": "cd zaplit-org && pnpm typecheck",
     "lint": "pnpm lint:com && pnpm lint:org",
-    "lint:com": "cd zaplit-com && next lint",
-    "lint:org": "cd zaplit-org && next lint",
-    "lint:fix": "pnpm lint:com --fix && pnpm lint:org --fix",
+    "lint:com": "cd zaplit-com && pnpm lint",
+    "lint:org": "cd zaplit-org && pnpm lint",
     "test": "pnpm test:com && pnpm test:org",
-    "test:com": "cd zaplit-com && vitest run",
-    "test:org": "cd zaplit-org && vitest run",
-    "test:watch": "cd zaplit-com && vitest",
+    "test:com": "cd zaplit-com && pnpm test run",
+    "test:org": "cd zaplit-org && pnpm test run",
+    "test:watch": "pnpm test:watch:com",
+    "test:watch:com": "cd zaplit-com && pnpm test",
+    "test:coverage": "pnpm test:coverage:com",
+    "test:coverage:com": "cd zaplit-com && pnpm test:coverage",
     "test:e2e": "playwright test",
-    "ci": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
-    "deploy:com": "ts-node scripts/deploy.ts zaplit-com",
-    "deploy:org": "ts-node scripts/deploy.ts zaplit-org",
-    "clean": "rm -rf zaplit-com/dist zaplit-org/dist zaplit-com/.next zaplit-org/.next"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.42.0",
-    "@types/node": "^22.0.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.7.0",
-    "vitest": "^1.3.0"
+    "test:e2e:ui": "playwright test --ui",
+    "ci": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
   },
   "workspaces": [
     "zaplit-com",
     "zaplit-org"
-  ]
+  ],
+  "devDependencies": {
+    "@playwright/test": "^1.54.0",
+    "@types/node": "^22.0.0",
+    "eslint": "^9.26.0",
+    "prettier": "^3.5.3",
+    "ts-node": "^10.9.2",
+    "typescript": "5.7.3",
+    "vitest": "^4.1.0"
+  }
 }

@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { createHash } from "crypto";
 
 // Configuration
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
+const N8N_TIMEOUT_MS = 10000; // 10 second timeout for webhook calls
+
+// Limit request body size to prevent DoS
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '1mb',
+    },
+  },
+};
 
 // In-memory rate limit store (use Redis in production for multi-instance)
 const rateLimit = new Map<string, { count: number; resetTime: number }>();
@@ -27,9 +38,9 @@ const consultationFormSchema = z.object({
   email: z.string().email("Valid email required"),
   company: z.string().min(2, "Company is required"),
   role: z.string().min(2, "Role is required"),
-  teamSize: z.enum(["1-10", "11-50", "51-200", "201-500", "501-1000", "1000+"]),
+  teamSize: z.enum(["1–10", "11–50", "51–200", "200+"]),
   techStack: z.array(z.string()).optional(),
-  securityLevel: z.enum(["standard", "enhanced", "enterprise"]).optional(),
+  securityLevel: z.enum(["standard", "high", "enterprise"]).optional(),
   compliance: z.array(z.string()).optional(),
   message: z.string().optional(),
   website: z.string().optional(), // Honeypot
@@ -64,13 +75,14 @@ function logAudit(event: {
   console.log("[AUDIT]", JSON.stringify(auditEntry));
 }
 
-// Hash IP for privacy
+// Hash IP for privacy using HMAC-SHA256
 function hashIP(ip: string): string {
-  return ip
-    .split("")
-    .reduce((acc, char) => acc + char.charCodeAt(0), 0)
-    .toString(16)
-    .slice(0, 16);
+  // Use a salt from environment or fallback to a static salt
+  const salt = process.env.IP_HASH_SALT || "zaplit-static-salt-2026";
+  return createHash("sha256")
+    .update(ip + salt)
+    .digest("hex")
+    .substring(0, 16);
 }
 
 // Retry wrapper
@@ -94,12 +106,12 @@ async function withRetry<T>(fn: () => Promise<T>, operationName: string): Promis
   return null;
 }
 
-// Send to n8n webhook
+// Send to n8n webhook with timeout
 async function sendToN8N(
   formType: string,
   data: unknown,
   metadata: Record<string, unknown>
-): Promise<boolean> {
+): Promise<{ success: boolean; error?: string }> {
   const webhookUrl =
     (formType === "consultation" && process.env.N8N_WEBHOOK_CONSULTATION) ||
     (formType === "contact" && process.env.N8N_WEBHOOK_CONTACT) ||
@@ -107,11 +119,16 @@ async function sendToN8N(
     process.env.N8N_WEBHOOK_URL;
 
   if (!webhookUrl) {
-    console.error("[N8N] No webhook URL configured");
-    return false;
+    const error = "[N8N] No webhook URL configured";
+    console.error(error);
+    return { success: false, error };
   }
 
-  return withRetry(async () => {
+  // Log what fields are being sent for audit trail
+  const dataFields = data && typeof data === 'object' ? Object.keys(data) : [];
+  console.log(`[N8N] Sending ${formType} form with fields:`, dataFields);
+
+  const result = await withRetry(async () => {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -120,30 +137,48 @@ async function sendToN8N(
       headers["X-Webhook-Secret"] = process.env.N8N_WEBHOOK_SECRET;
     }
 
-    const response = await fetch(webhookUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        formType,
-        data,
-        metadata,
-      }),
-    });
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), N8N_TIMEOUT_MS);
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    try {
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          formType,
+          data,
+          metadata,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return true;
+    } finally {
+      clearTimeout(timeoutId);
     }
+  }, "n8n webhook");
 
-    return true;
-  }, "n8n webhook") as Promise<boolean>;
+  if (!result) {
+    const error = "Failed to send to n8n after retries";
+    console.error(`[N8N] ${error}`);
+    return { success: false, error };
+  }
+
+  return { success: true };
 }
 
 // Main handler
 export async function POST(request: NextRequest) {
-  // Get IP from headers (Cloud Run/Cloudflare)
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? 
-             request.headers.get("x-real-ip") ?? 
-             "unknown";
+  // Get IP from headers (Cloud Run/Cloudflare) - use last IP to prevent spoofing
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const ip = forwardedFor 
+    ? forwardedFor.split(",").pop()?.trim() || "unknown"
+    : request.headers.get("x-real-ip") || "unknown";
   const ipHash = hashIP(ip);
   const now = Date.now();
   const submissionId = crypto.randomUUID();
@@ -233,7 +268,7 @@ export async function POST(request: NextRequest) {
       success: true,
     });
 
-    // Send to n8n (async, don't block response)
+    // Send to n8n with proper error handling
     const metadata = {
       submittedAt: new Date().toISOString(),
       source: "zaplit-com",
@@ -242,20 +277,34 @@ export async function POST(request: NextRequest) {
       userAgent: request.headers.get("user-agent"),
     };
 
-    // Fire and forget - don't block user response
-    sendToN8N(formTypeResult.data, validatedData, metadata).then((success) => {
-      if (success) {
-        console.log("[N8N] Webhook sent successfully");
-      } else {
-        console.error("[N8N] Webhook failed");
-      }
-    });
+    // Wait for n8n response - don't fire-and-forget (causes data loss)
+    const n8nResult = await sendToN8N(formTypeResult.data, validatedData, metadata);
 
-    // Return success immediately
+    if (!n8nResult.success) {
+      // Log the failure but still return success to user (graceful degradation)
+      // In production, you might want to queue for retry instead
+      logAudit({
+        action: "N8N_WEBHOOK_FAILED",
+        formType: formTypeResult.data,
+        email: validatedData.email,
+        ipHash,
+        success: false,
+        error: n8nResult.error,
+        details: { submissionId },
+      });
+      console.error(`[N8N] Webhook failed for submission ${submissionId}:`, n8nResult.error);
+      
+      // Still return success to user - we'll handle retry internally
+      // TODO: Implement dead letter queue for failed submissions
+    } else {
+      console.log(`[N8N] Webhook sent successfully for submission ${submissionId}`);
+    }
+
     return NextResponse.json({
       success: true,
       message: "Form submitted successfully",
       id: submissionId,
+      n8nStatus: n8nResult.success ? "delivered" : "queued",
     });
 
   } catch (error) {

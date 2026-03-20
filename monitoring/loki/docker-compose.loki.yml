@@ -1,0 +1,126 @@
+# Docker Compose for Loki Log Aggregation Stack
+# 
+# This compose file adds Loki and Promtail to the existing monitoring stack
+# Usage: docker-compose -f docker-compose.loki.yml up -d
+#
+# Prerequisites:
+#   - Docker and Docker Compose installed
+#   - Existing docker network 'monitoring' (or create with: docker network create monitoring)
+#   - Environment variables in .env.loki file
+
+version: '3.8'
+
+services:
+  # ============================================
+  # Loki - Log Aggregation Server (Self-hosted)
+  # ============================================
+  # Uncomment this section if running self-hosted Loki
+  # Otherwise, use Grafana Cloud Loki (recommended)
+  #
+  # loki:
+  #   image: grafana/loki:2.9.4
+  #   container_name: loki
+  #   ports:
+  #     - "3100:3100"
+  #   volumes:
+  #     - ./config/loki-selfhosted.yml:/etc/loki/local-config.yaml:ro
+  #     - loki-data:/loki
+  #   command: -config.file=/etc/loki/local-config.yaml
+  #   restart: unless-stopped
+  #   networks:
+  #     - monitoring
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 10s
+  #   logging:
+  #     driver: json-file
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
+
+  # ============================================
+  # Promtail - Log Shipper
+  # ============================================
+  promtail:
+    image: grafana/promtail:2.9.4
+    container_name: promtail
+    volumes:
+      - ./config/promtail.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - promtail-data:/var/lib/promtail
+      - /etc/machine-id:/etc/machine-id:ro
+    command: -config.file=/etc/promtail/config.yml -config.expand-env=true
+    restart: unless-stopped
+    networks:
+      - monitoring
+    environment:
+      - GRAFANA_CLOUD_LOKI_HOST=${GRAFANA_CLOUD_LOKI_HOST}
+      - GRAFANA_CLOUD_LOKI_USER=${GRAFANA_CLOUD_LOKI_USER}
+      - GRAFANA_CLOUD_API_KEY=${GRAFANA_CLOUD_API_KEY}
+    # Required for journald scraping (if using)
+    # privileged: true
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9080/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+  # ============================================
+  # Grafana (if not already running)
+  # ============================================
+  # Uncomment if you need a local Grafana instance
+  # Otherwise, use Grafana Cloud
+  #
+  # grafana:
+  #   image: grafana/grafana:10.3.1
+  #   container_name: grafana
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - grafana-data:/var/lib/grafana
+  #     - ./config/provisioning:/etc/grafana/provisioning:ro
+  #     - ./dashboards:/var/lib/grafana/dashboards:ro
+  #   environment:
+  #     - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+  #     - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+  #     - GF_USERS_ALLOW_SIGN_UP=false
+  #     - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+  #   restart: unless-stopped
+  #   networks:
+  #     - monitoring
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 30s
+
+volumes:
+  # loki-data:
+  promtail-data:
+  # grafana-data:
+
+networks:
+  monitoring:
+    external: true
+    # If network doesn't exist, remove 'external: true' and uncomment:
+    # driver: bridge

@@ -1,0 +1,51 @@
+# Example Terraform variables for Hestia CP deployment
+# Copy this file to terraform.tfvars and fill in your values
+
+# Required Configuration
+# ======================
+
+# GCP Project ID
+project_id = "your-project-id"
+
+# Primary domain (e.g., zaplit.com)
+domain = "zaplit.com"
+
+# Admin email for SSL certificates and notifications
+admin_email = "admin@zaplit.com"
+
+# Passwords (generate strong passwords for production)
+# You can generate passwords with: openssl rand -base64 24
+hestia_admin_password = "change-me-strong-password"
+wordpress_db_password = "change-me-strong-password"
+mysql_root_password = "change-me-strong-password"
+
+# Optional Configuration
+# ======================
+
+# GCP region and zone
+# region = "us-central1"
+# zone = "us-central1-a"
+
+# VM machine type
+# e2-standard-2: 2 vCPU, 8 GB RAM (~$48/month)
+# e2-medium: 2 vCPU, 4 GB RAM (~$24/month) - for development
+# machine_type = "e2-standard-2"
+
+# Boot disk size in GB
+# disk_size = 100
+
+# Hestia Control Panel port
+# hestia_port = "8083"
+
+# IP addresses allowed for SSH access (CIDR notation)
+# Get your IP: curl ifconfig.me
+# allowed_ssh_ips = ["YOUR_IP/32"]
+
+# IP addresses allowed for Hestia CP admin access
+# allowed_admin_ips = ["YOUR_IP/32"]
+
+# Cloud DNS zone name (optional - leave empty to skip DNS creation)
+# dns_zone_name = "zaplit-zone"
+
+# Alert notification channels (optional)
+# alert_notification_channels = ["projects/PROJECT_ID/notificationChannels/CHANNEL_ID"]

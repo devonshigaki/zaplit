@@ -1,0 +1,391 @@
+{
+  "name": "Consultation Form to CRM - v3 Enhanced",
+  "description": "Enhanced workflow with data validation, duplicate detection, and improved error handling",
+  "version": "3.0.0",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "consultation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-entry-001",
+      "name": "Consultation Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "consultation-form-v3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Entry Validation Node - Validates and sanitizes form data\nconst body = $input.first().json.body;\nconst result = { valid: true, errors: [], warnings: [], normalized: {}, original: body };\n\nconst validateEmail = (email) => {\n  if (!email || typeof email !== 'string') return { valid: false, reason: 'Email is required' };\n  const trimmed = email.trim().toLowerCase();\n  if (trimmed.length === 0) return { valid: false, reason: 'Email is empty' };\n  if (trimmed.length > 254) return { valid: false, reason: 'Email too long' };\n  if (!trimmed.includes('@')) return { valid: false, reason: 'Missing @ symbol' };\n  const [local, domain] = trimmed.split('@');\n  if (!local || local.length === 0) return { valid: false, reason: 'Local part empty' };\n  if (local.length > 64) return { valid: false, reason: 'Local part too long' };\n  if (local.startsWith('.') || local.endsWith('.')) return { valid: false, reason: 'Local part cannot start/end with dot' };\n  if (local.includes('..')) return { valid: false, reason: 'Consecutive dots in local part' };\n  if (!domain || domain.length === 0) return { valid: false, reason: 'Domain empty' };\n  if (!domain.includes('.')) return { valid: false, reason: 'Missing TLD' };\n  const tld = domain.substring(domain.lastIndexOf('.') + 1);\n  if (tld.length < 2) return { valid: false, reason: 'TLD too short' };\n  const emailRegex = /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/;\n  if (!emailRegex.test(trimmed)) return { valid: false, reason: 'Invalid email format' };\n  return { valid: true, normalized: trimmed };\n};\n\nconst parseFullName = (fullName) => {\n  if (!fullName || typeof fullName !== 'string') return { firstName: 'Unknown', lastName: '', prefix: '', suffix: '' };\n  const clean = fullName.trim().replace(/\\s+/g, ' ');\n  if (clean.length === 0) return { firstName: 'Unknown', lastName: '', prefix: '', suffix: '' };\n  const prefixes = ['Dr.', 'Dr', 'Mr.', 'Mr', 'Mrs.', 'Mrs', 'Ms.', 'Ms', 'Prof.', 'Prof'];\n  const suffixes = ['Jr.', 'Jr', 'Sr.', 'Sr', 'II', 'III', 'IV', 'V', 'PhD', 'MD'];\n  let working = clean;\n  let prefix = '';\n  let suffix = '';\n  for (const p of prefixes) {\n    if (working.startsWith(p + ' ')) {\n      prefix = p.endsWith('.') ? p : p + '.';\n      working = working.substring(p.length).trim();\n      break;\n    }\n  }\n  for (const s of suffixes) {\n    if (working.endsWith(' ' + s)) {\n      suffix = s;\n      working = working.substring(0, working.length - s.length).trim();\n      break;\n    }\n  }\n  const parts = working.split(' ');\n  if (parts.length === 1) {\n    return { firstName: prefix ? `${prefix} ${parts[0]}` : parts[0], lastName: suffix, prefix, suffix };\n  }\n  const firstName = prefix ? `${prefix} ${parts[0]}` : parts[0];\n  const lastName = suffix ? `${parts.slice(1).join(' ')} ${suffix}` : parts.slice(1).join(' ');\n  return { firstName, lastName, prefix, suffix };\n};\n\nconst sanitizeInput = (input, maxLength = 5000) => {\n  if (!input || typeof input !== 'string') return '';\n  let sanitized = input.replace(/<[^>]*>/g, '').replace(/[<>]/g, '').trim();\n  if (sanitized.length > maxLength) sanitized = sanitized.substring(0, maxLength);\n  return sanitized;\n};\n\nconst validateCompany = (name) => {\n  if (!name || typeof name !== 'string') return { valid: false, reason: 'Company name required' };\n  const trimmed = name.trim();\n  if (trimmed.length === 0) return { valid: false, reason: 'Company name empty' };\n  if (trimmed.length < 2) return { valid: false, reason: 'Company name too short' };\n  if (trimmed.length > 255) return { valid: false, reason: 'Company name too long' };\n  if (!/[a-zA-Z]/.test(trimmed)) return { valid: false, reason: 'Must contain letters' };\n  return { valid: true, normalized: trimmed };\n};\n\nconst validatePhone = (phone) => {\n  if (!phone || typeof phone !== 'string') return { valid: false, reason: 'Invalid phone' };\n  const digits = phone.replace(/\\D/g, '');\n  if (digits.length < 10) return { valid: false, reason: 'Too few digits' };\n  if (digits.length > 15) return { valid: false, reason: 'Too many digits' };\n  const normalized = digits.length === 10 ? '+1' + digits : '+' + digits;\n  return { valid: true, normalized };\n};\n\nconst data = body.data || body;\n\nconst emailField = data.email || data.Email;\nconst emailResult = validateEmail(emailField);\nif (!emailResult.valid) {\n  result.valid = false;\n  result.errors.push({ field: 'email', message: emailResult.reason, code: 'INVALID_EMAIL' });\n} else {\n  result.normalized.email = emailResult.normalized;\n}\n\nconst nameField = data.name || data.fullName || data.full_name;\nif (nameField) {\n  const nameParts = parseFullName(nameField);\n  result.normalized.firstName = nameParts.firstName;\n  result.normalized.lastName = nameParts.lastName;\n  result.normalized.namePrefix = nameParts.prefix;\n  result.normalized.nameSuffix = nameParts.suffix;\n} else {\n  result.warnings.push({ field: 'name', message: 'Name not provided' });\n  result.normalized.firstName = 'Unknown';\n  result.normalized.lastName = '';\n}\n\nconst companyField = data.company || data.companyName;\nif (companyField) {\n  const companyResult = validateCompany(companyField);\n  if (!companyResult.valid) {\n    result.warnings.push({ field: 'company', message: companyResult.reason });\n    result.normalized.company = sanitizeInput(companyField, 255) || 'Unknown Company';\n  } else {\n    result.normalized.company = companyResult.normalized;\n  }\n} else {\n  result.normalized.company = 'Unknown Company';\n}\n\nconst phoneField = data.phone || data.phoneNumber;\nif (phoneField) {\n  const phoneResult = validatePhone(phoneField);\n  if (!phoneResult.valid) {\n    result.warnings.push({ field: 'phone', message: phoneResult.reason });\n  } else {\n    result.normalized.phone = phoneResult.normalized;\n  }\n}\n\nresult.normalized.jobTitle = sanitizeInput(data.role || data.jobTitle || data.title, 255);\nresult.normalized.message = sanitizeInput(data.message || data.notes, 10000);\nresult.normalized.teamSize = sanitizeInput(data.teamSize, 50);\nresult.normalized.securityLevel = sanitizeInput(data.securityLevel, 100);\n\nconst formatArray = (arr) => {\n  if (!arr) return '';\n  if (Array.isArray(arr)) return arr.join(', ');\n  if (typeof arr === 'string') return arr;\n  return String(arr);\n};\nresult.normalized.techStack = formatArray(data.techStack);\nresult.normalized.compliance = formatArray(data.compliance);\nresult.normalized._meta = { submittedAt: new Date().toISOString(), source: 'consultation_form_v3', validationVersion: '3.0.0' };\n\nreturn [{ json: result }];"
+      },
+      "id": "validate-entry-002",
+      "name": "Entry Validation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-valid",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-valid-003",
+      "name": "Is Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Duplicate Detection Node\nconst input = $input.first().json;\nconst normalized = input.normalized;\nconst CRM_BASE_URL = $env.CRM_BASE_URL || 'https://crm.zaplit.com';\nconst CRM_API_TOKEN = $env.CRM_API_TOKEN;\n\nconst result = {\n  hasDuplicates: false,\n  person: { duplicate: false, record: null, id: null },\n  company: { duplicate: false, record: null, id: null, matchScore: 0 },\n  action: 'create',\n  data: normalized\n};\n\nconst levenshtein = (s1, s2) => {\n  if (s1.length === 0) return s2.length;\n  if (s2.length === 0) return s1.length;\n  const matrix = [];\n  for (let i = 0; i <= s2.length; i++) matrix[i] = [i];\n  for (let j = 0; j <= s1.length; j++) matrix[0][j] = j;\n  for (let i = 1; i <= s2.length; i++) {\n    for (let j = 1; j <= s1.length; j++) {\n      matrix[i][j] = s2[i-1] === s1[j-1] ? matrix[i-1][j-1] : Math.min(matrix[i-1][j] + 1, matrix[i][j-1] + 1, matrix[i-1][j-1] + 1);\n    }\n  }\n  return matrix[s2.length][s1.length];\n};\n\nconst similarity = (s1, s2) => {\n  s1 = String(s1 || '').toLowerCase();\n  s2 = String(s2 || '').toLowerCase();\n  if (s1 === s2) return 1;\n  const maxLen = Math.max(s1.length, s2.length);\n  if (maxLen === 0) return 0;\n  return (maxLen - levenshtein(s1, s2)) / maxLen;\n};\n\nconst normalizeCompany = (name) => {\n  if (!name) return '';\n  return name.toLowerCase().replace(/\\s*,?\\s*(inc\\.?|incorporated|corp\\.?|corporation|llc|ltd\\.?|limited)\\s*$/i, '').replace(/[.,;:!?()[\\]{}]/g, '').trim();\n};\n\nconst fuzzyMatchCompany = (name1, name2) => {\n  if (!name1 || !name2) return { score: 0, match: false };\n  const orig1 = name1.trim();\n  const orig2 = name2.trim();\n  if (orig1.toLowerCase() === orig2.toLowerCase()) return { score: 1, match: true };\n  const norm1 = normalizeCompany(orig1);\n  const norm2 = normalizeCompany(orig2);\n  if (norm1 === norm2 && norm1.length > 0) return { score: 0.95, match: true };\n  const normSim = similarity(norm1, norm2);\n  const origSim = similarity(orig1, orig2);\n  let subScore = 0;\n  if (norm1.length > 3 && norm2.length > 3) {\n    if (norm1.includes(norm2) || norm2.includes(norm1)) {\n      subScore = Math.min(norm1.length, norm2.length) / Math.max(norm1.length, norm2.length);\n    }\n  }\n  const score = Math.max(normSim * 0.5 + origSim * 0.3 + subScore * 0.2, subScore * 0.9);\n  return { score: Math.round(score * 100) / 100, match: score >= 0.85 };\n};\n\nconst checkDuplicatePerson = async (email) => {\n  if (!email || !CRM_API_TOKEN) return { duplicate: false };\n  try {\n    const response = await fetch(`${CRM_BASE_URL}/rest/people?filter=emails[contains]=${encodeURIComponent(email)}&limit=5`, {\n      headers: { 'Authorization': `Bearer ${CRM_API_TOKEN}`, 'Content-Type': 'application/json' }\n    });\n    if (!response.ok) throw new Error(`HTTP ${response.status}`);\n    const data = await response.json();\n    if (data.data && data.data.length > 0) {\n      for (const person of data.data) {\n        const emails = person.emails || [];\n        const exactMatch = emails.some(e => e.email?.toLowerCase().trim() === email.toLowerCase());\n        if (exactMatch) return { duplicate: true, record: person, id: person.id, confidence: 'exact' };\n      }\n    }\n    return { duplicate: false };\n  } catch (error) {\n    console.error('Person check failed:', error);\n    return { duplicate: false, error: error.message };\n  }\n};\n\nconst checkDuplicateCompany = async (name) => {\n  if (!name || !CRM_API_TOKEN) return { duplicate: false, matchScore: 0 };\n  try {\n    const exactResponse = await fetch(`${CRM_BASE_URL}/rest/companies?filter=name[eq]=${encodeURIComponent(name)}&limit=5`, {\n      headers: { 'Authorization': `Bearer ${CRM_API_TOKEN}`, 'Content-Type': 'application/json' }\n    });\n    if (!exactResponse.ok) throw new Error(`HTTP ${exactResponse.status}`);\n    const exactData = await exactResponse.json();\n    if (exactData.data && exactData.data.length > 0) {\n      const exact = exactData.data.find(c => c.name?.toLowerCase().trim() === name.toLowerCase());\n      if (exact) return { duplicate: true, record: exact, id: exact.id, matchScore: 1, confidence: 'exact' };\n    }\n    const firstWord = name.split(' ')[0];\n    const fuzzyResponse = await fetch(`${CRM_BASE_URL}/rest/companies?filter=name[ilike]=%${encodeURIComponent(firstWord)}%&limit=20`, {\n      headers: { 'Authorization': `Bearer ${CRM_API_TOKEN}`, 'Content-Type': 'application/json' }\n    });\n    if (!fuzzyResponse.ok) throw new Error(`HTTP ${fuzzyResponse.status}`);\n    const fuzzyData = await fuzzyResponse.json();\n    if (fuzzyData.data && fuzzyData.data.length > 0) {\n      let bestMatch = null;\n      let bestScore = 0;\n      for (const company of fuzzyData.data) {\n        const match = fuzzyMatchCompany(name, company.name);\n        if (match.score > bestScore) {\n          bestScore = match.score;\n          bestMatch = company;\n        }\n      }\n      if (bestMatch && bestScore >= 0.85) {\n        return { duplicate: true, record: bestMatch, id: bestMatch.id, matchScore: bestScore, confidence: bestScore >= 0.95 ? 'very_high' : 'high' };\n      }\n    }\n    return { duplicate: false, matchScore: 0 };\n  } catch (error) {\n    console.error('Company check failed:', error);\n    return { duplicate: false, matchScore: 0, error: error.message };\n  }\n};\n\nif (normalized.email) {\n  result.person = await checkDuplicatePerson(normalized.email);\n  if (result.person.duplicate) result.hasDuplicates = true;\n}\nif (normalized.company && normalized.company !== 'Unknown Company') {\n  result.company = await checkDuplicateCompany(normalized.company);\n  if (result.company.duplicate) result.hasDuplicates = true;\n}\nif (!result.hasDuplicates) {\n  result.action = 'create';\n} else if (result.person.duplicate && result.company.duplicate) {\n  result.action = 'merge_both';\n} else if (result.person.duplicate) {\n  result.action = 'merge_person';\n} else if (result.company.duplicate) {\n  result.action = 'merge_company';\n}\nreturn [{ json: result }];"
+      },
+      "id": "duplicate-check-004",
+      "name": "Duplicate Detection",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Person Data\nconst input = $input.first().json;\nconst data = input.data;\nif (input.person.duplicate && input.person.id) {\n  return [{ json: { personId: input.person.id, created: false, existing: true, record: input.person.record } }];\n}\nconst personData = {\n  name: { firstName: data.firstName, lastName: data.lastName },\n  emails: [{ email: data.email, isPrimary: true }],\n  jobTitle: data.jobTitle || undefined\n};\nif (data.phone) {\n  personData.phones = [{ number: data.phone, isPrimary: true }];\n}\nreturn [{ json: { personData: personData, personId: null, created: false, existing: false } }];"
+      },
+      "id": "prep-person-005",
+      "name": "Prepare Person Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 150]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CRM_BASE_URL }}/rest/people",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.personData) }}",
+        "options": {}
+      },
+      "id": "create-person-006",
+      "name": "Create Person",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 150],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "twenty-crm-auth",
+          "name": "Twenty CRM API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Company Data\nconst input = $input.first().json;\nconst data = input.data;\nif (input.company.duplicate && input.company.id) {\n  return [{ json: { companyId: input.company.id, created: false, existing: true, matchScore: input.company.matchScore, record: input.company.record } }];\n}\nconst companyData = { name: data.company, domainName: data.email?.split('@')[1] || undefined };\nreturn [{ json: { companyData: companyData, companyId: null, created: false, existing: false } }];"
+      },
+      "id": "prep-company-007",
+      "name": "Prepare Company Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 250]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CRM_BASE_URL }}/rest/companies",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.companyData) }}",
+        "options": {}
+      },
+      "id": "create-company-008",
+      "name": "Create Company",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 250],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "twenty-crm-auth",
+          "name": "Twenty CRM API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "waitForAll"
+      },
+      "id": "merge-records-009",
+      "name": "Merge Records",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [1450, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract IDs and Prepare Note Data\nconst inputs = $input.all();\nconst personInput = inputs[0].json;\nconst companyInput = inputs[1].json;\nconst personId = personInput.personId || personInput.data?.id;\nconst companyId = companyInput.companyId || companyInput.data?.id;\nconst formData = items[0].json.data || {};\nreturn [{\n  json: {\n    personId: personId,\n    companyId: companyId,\n    personCreated: personInput.created !== false && !personInput.existing,\n    personExisting: personInput.existing || false,\n    companyCreated: companyInput.created !== false && !companyInput.existing,\n    companyExisting: companyInput.existing || false,\n    companyMatchScore: companyInput.matchScore || 1,\n    formData: formData\n  }\n}];"
+      },
+      "id": "extract-ids-010",
+      "name": "Extract IDs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 200]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.CRM_BASE_URL }}/rest/people/{{ $json.personId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "={\\n  \"companyId\": \"{{ $json.companyId }}\"\\n}",
+        "options": { "ignoreHttpStatusErrors": true }
+      },
+      "id": "link-person-011",
+      "name": "Link Person to Company",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1850, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "twenty-crm-auth",
+          "name": "Twenty CRM API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CRM_BASE_URL }}/rest/notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "={\\n  \"title\": \"Consultation Request: {{ $json.formData.company }}\",\\n  \"body\": \"Contact: {{ $json.formData.firstName }} {{ $json.formData.lastName }}\\nEmail: {{ $json.formData.email }}\\nRole: {{ $json.formData.jobTitle || 'Not specified' }}\\n\\nTeam Size: {{ $json.formData.teamSize || 'Not specified' }}\\nSecurity Level: {{ $json.formData.securityLevel || 'Not specified' }}\\nCompliance: {{ $json.formData.compliance || 'None specified' }}\\n\\nTech Stack:\\n{{ $json.formData.techStack || 'None specified' }}\\n\\nMessage:\\n{{ $json.formData.message || 'No message provided' }}\\n\\nSubmitted: {{ $json.formData._meta?.submittedAt || new Date().toISOString() }}\",\\n  \"personId\": \"{{ $json.personId }}\",\\n  \"companyId\": \"{{ $json.companyId }}\"\\n}"
+      },
+      "id": "create-note-012",
+      "name": "Create Note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2050, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "twenty-crm-auth",
+          "name": "Twenty CRM API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\\n  \"success\": true,\\n  \"message\": \"Thank you for your submission! We'll be in touch soon.\",\\n  \"data\": {\\n    \"personId\": \"{{ $json.personId }}\",\\n    \"companyId\": \"{{ $json.companyId }}\",\\n    \"personCreated\": {{ $json.personCreated }},\\n    \"companyCreated\": {{ $json.companyCreated }},\\n    \"personExisting\": {{ $json.personExisting }},\\n    \"companyExisting\": {{ $json.companyExisting }},\\n    \"companyMatchScore\": {{ $json.companyMatchScore || 1 }}\\n  }\\n}",
+        "options": {}
+      },
+      "id": "success-response-013",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2250, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\\n  \"success\": false,\\n  \"message\": \"Validation failed. Please check your input.\",\\n  \"errors\": {{ JSON.stringify($json.errors) }},\\n  \"code\": \"VALIDATION_ERROR\"\\n}",
+        "options": { "responseCode": 400 }
+      },
+      "id": "validation-error-014",
+      "name": "Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [850, 500]
+    }
+  ],
+  "connections": {
+    "Consultation Webhook": {
+      "main": [
+        [
+          {
+            "node": "Entry Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entry Validation": {
+      "main": [
+        [
+          {
+            "node": "Is Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid?": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Detection",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Detection": {
+      "main": [
+        [
+          {
+            "node": "Prepare Person Data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare Company Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Person Data": {
+      "main": [
+        [
+          {
+            "node": "Create Person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Person": {
+      "main": [
+        [
+          {
+            "node": "Merge Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Company Data": {
+      "main": [
+        [
+          {
+            "node": "Create Company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Company": {
+      "main": [
+        [
+          {
+            "node": "Merge Records",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Records": {
+      "main": [
+        [
+          {
+            "node": "Extract IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract IDs": {
+      "main": [
+        [
+          {
+            "node": "Link Person to Company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Link Person to Company": {
+      "main": [
+        [
+          {
+            "node": "Create Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Note": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "",
+    "timezone": "America/Los_Angeles"
+  },
+  "staticData": null,
+  "tags": ["production", "consultation-form", "v3"],
+  "variables": [
+    {
+      "name": "CRM_BASE_URL",
+      "value": "https://crm.zaplit.com"
+    }
+  ]
+}

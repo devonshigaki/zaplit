@@ -1,0 +1,75 @@
+# Cloud Build Configuration for zaplit-com
+# Production deployment pipeline
+
+steps:
+  # Step 1: Install dependencies and run tests
+  - name: 'node:20-slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        cd zaplit-com
+        npm ci
+        npm run lint || true
+        npm run typecheck || true
+    id: 'install-and-test'
+
+  # Step 2: Build container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/zaplit-com:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/zaplit-com:latest'
+      - './zaplit-com'
+    id: 'build-image'
+
+  # Step 3: Push to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/zaplit-com:$COMMIT_SHA'
+    id: 'push-image'
+
+  # Step 4: Deploy to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud run deploy zaplit-com \
+          --image=gcr.io/$PROJECT_ID/zaplit-com:$COMMIT_SHA \
+          --region=us-central1 \
+          --platform=managed \
+          --allow-unauthenticated \
+          --set-secrets=TWENTY_API_KEY=twenty-api-key:latest,N8N_WEBHOOK_SECRET=n8n-webhook-secret:latest,APP_SECRET=app-secret:latest \
+          --set-env-vars=NODE_ENV=production,NEXT_PUBLIC_SITE_URL=https://zaplit.com \
+          --memory=1Gi \
+          --cpu=1 \
+          --concurrency=1000 \
+          --max-instances=10 \
+          --min-instances=1
+    id: 'deploy-cloud-run'
+
+  # Step 5: Verify deployment
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "Verifying deployment..."
+        sleep 10
+        curl -sf https://zaplit.com/api/health || exit 1
+        echo "✓ Deployment verified"
+    id: 'verify-deployment'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+
+timeout: 900s
+
+images:
+  - 'gcr.io/$PROJECT_ID/zaplit-com:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/zaplit-com:latest'

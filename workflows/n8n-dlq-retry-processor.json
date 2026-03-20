@@ -1,0 +1,475 @@
+{
+  "name": "DLQ Retry Processor",
+  "description": "Scheduled workflow that processes DLQ entries ready for retry. Runs every 5 minutes to attempt retries with exponential backoff.",
+  "version": "1.0.0",
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "tags": ["dlq", "retry", "scheduled"],
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger-001",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  id, execution_id, original_payload, error_message, error_category,\n  status, retry_count, max_retries, next_retry_at, retry_history\nFROM form_submission_dlq\nWHERE status = 'PENDING_RETRY'\n  AND next_retry_at <= NOW()\nORDER BY next_retry_at ASC, created_at ASC\nLIMIT 50"
+      },
+      "id": "query-ready-002",
+      "name": "Query Ready Items",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [450, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-dlq",
+          "name": "PostgreSQL DLQ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-items",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": "0",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "has-items-003",
+      "name": "Has Items?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1
+      },
+      "id": "split-items-004",
+      "name": "Process Each Item",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE form_submission_dlq SET status = 'IN_PROGRESS', updated_at = NOW() WHERE id = '{{ $json.id }}'"
+      },
+      "id": "mark-progress-005",
+      "name": "Mark In Progress",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1050, 200],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-dlq",
+          "name": "PostgreSQL DLQ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate next retry with exponential backoff\nconst item = $input.first().json;\nconst retryCount = item.retry_count;\nconst category = item.error_category || 'UNKNOWN';\n\n// Category-specific base delays (minutes)\nconst baseDelays = {\n  'TRANSIENT': 5,\n  'NETWORK': 5,\n  'RATE_LIMIT': 10,\n  'DEPENDENCY': 7.5,\n  'AUTHENTICATION': 2.5,\n  'UNKNOWN': 5\n};\n\nconst baseDelay = baseDelays[category] || 5;\nconst maxDelay = 120; // 2 hours cap\n\n// Exponential backoff: base * 2^retry_count\nconst exponentialDelay = baseDelay * Math.pow(2, retryCount);\nconst cappedDelay = Math.min(exponentialDelay, maxDelay);\n\n// Add jitter (±10%)\nconst jitter = cappedDelay * 0.1 * (Math.random() * 2 - 1);\nconst finalDelay = cappedDelay + jitter;\n\nconst nextRetryAt = new Date(Date.now() + finalDelay * 60000);\n\nreturn [{\n  json: {\n    ...item,\n    calculated_delay_minutes: Math.round(finalDelay),\n    next_retry_calculated: nextRetryAt.toISOString()\n  }\n}];"
+      },
+      "id": "calc-retry-006",
+      "name": "Calculate Retry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CRM_BASE_URL }}/rest/people",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "application/json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.original_payload.body?.personData || $json.original_payload) }}",
+        "options": {
+          "timeout": 30000,
+          "ignoreHttpStatusErrors": true
+        }
+      },
+      "id": "attempt-retry-007",
+      "name": "Attempt Retry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1450, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "twenty-crm-auth",
+          "name": "Twenty CRM API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-success",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": "200",
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "retry-success-008",
+      "name": "Retry Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1650, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ 'UPDATE form_submission_dlq SET status = ''RESOLVED'', resolved_at = NOW(), retry_count = ' + ($json.retry_count + 1) + ', retry_history = retry_history || ''[{' + '\"attempt_number\": ' + ($json.retry_count + 1) + ', \"attempted_at\": \"' + new Date().toISOString() + '\", \"result\": \"success\"}]''::jsonb WHERE id = ''' + $json.id + '''' }}"
+      },
+      "id": "mark-resolved-009",
+      "name": "Mark Resolved",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1850, 100],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-dlq",
+          "name": "PostgreSQL DLQ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "channel": "={{ $env.DLQ_ALERT_CHANNEL || '#form-submission-alerts' }}",
+        "text": "=:white_check_mark: *DLQ Retry Successful*\n\n*Execution:* `{{ $json.execution_id }}`\n*Retry:* {{ $json.retry_count + 1 }}/{{ $json.max_retries }}\n*Form Type:* {{ $json.form_type }}\n\nSubmission has been successfully processed after retry.",
+        "options": {}
+      },
+      "id": "slack-resolved-010",
+      "name": "Notify Resolved",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [2050, 100],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-alerts",
+          "name": "Slack Alerts"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Determine next action for failed retry\nconst item = $input.first().json;\nconst newRetryCount = item.retry_count + 1;\nconst maxRetries = item.max_retries;\n\nif (newRetryCount >= maxRetries) {\n  return [{\n    json: {\n      ...item,\n      new_status: 'PERMANENT_FAILURE',\n      new_retry_count: newRetryCount,\n      next_retry_at: null,\n      is_permanent: true\n    }\n  }];\n}\n\n// Schedule next retry\nconst category = item.error_category || 'UNKNOWN';\nconst baseDelays = {\n  'TRANSIENT': 5,\n  'NETWORK': 5,\n  'RATE_LIMIT': 10,\n  'DEPENDENCY': 7.5,\n  'AUTHENTICATION': 2.5,\n  'UNKNOWN': 5\n};\nconst baseDelay = baseDelays[category] || 5;\nconst maxDelay = 120;\nconst exponentialDelay = baseDelay * Math.pow(2, newRetryCount);\nconst cappedDelay = Math.min(exponentialDelay, maxDelay);\nconst jitter = cappedDelay * 0.1 * (Math.random() * 2 - 1);\nconst finalDelay = cappedDelay + jitter;\nconst nextRetryAt = new Date(Date.now() + finalDelay * 60000);\n\nreturn [{\n  json: {\n    ...item,\n    new_status: 'PENDING_RETRY',\n    new_retry_count: newRetryCount,\n    next_retry_at: nextRetryAt.toISOString(),\n    is_permanent: false,\n    retry_error: item.error?.message || 'Retry failed'\n  }\n}];"
+      },
+      "id": "calc-next-011",
+      "name": "Calculate Next Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-permanent",
+              "leftValue": "={{ $json.is_permanent }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "is-permanent-012",
+      "name": "Is Permanent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2050, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ 'UPDATE form_submission_dlq SET status = ''PERMANENT_FAILURE'', retry_count = ' + $json.new_retry_count + ', last_failure_at = NOW(), retry_history = retry_history || ''[{' + '\"attempt_number\": ' + $json.new_retry_count + ', \"attempted_at\": \"' + new Date().toISOString() + '\", \"result\": \"failed\", \"error\": \"' + ($json.retry_error || 'Max retries exceeded').replace(/'/g, ''') + '\"}]''::jsonb, review_notes = COALESCE(review_notes, '''') || ''\\n[' + new Date().toISOString() + '] Marked permanent: Max retries exceeded'' WHERE id = ''' + $json.id + '''' }}"
+      },
+      "id": "mark-permanent-013",
+      "name": "Mark Permanent Failure",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2250, 200],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-dlq",
+          "name": "PostgreSQL DLQ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "channel": "={{ $env.DLQ_ALERT_CHANNEL || '#form-submission-alerts' }}",
+        "text": "=:x: *PERMANENT FAILURE - Manual Intervention Required*\n\n*Execution:* `{{ $json.execution_id }}`\n*Form Type:* {{ $json.form_type }}\n*Failed after {{ $json.max_retries }} retries*\n\n*Last Error:* {{ $json.retry_error?.substring(0, 200) || 'Max retries exceeded' }}\n\nPlease review the DLQ dashboard for details and manual retry options.",
+        "options": {}
+      },
+      "id": "slack-permanent-014",
+      "name": "Alert Permanent Failure",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [2450, 200],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-alerts",
+          "name": "Slack Alerts"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ 'UPDATE form_submission_dlq SET status = ''PENDING_RETRY'', retry_count = ' + $json.new_retry_count + ', next_retry_at = ''' + $json.next_retry_at + ''', last_failure_at = NOW(), retry_history = retry_history || ''[{' + '\"attempt_number\": ' + $json.new_retry_count + ', \"attempted_at\": \"' + new Date().toISOString() + '\", \"result\": \"failed\", \"error\": \"' + ($json.retry_error || 'Unknown error').replace(/'/g, ''') + '\"}]''::jsonb WHERE id = ''' + $json.id + '''' }}"
+      },
+      "id": "schedule-retry-015",
+      "name": "Schedule Next Retry",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2250, 400],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-dlq",
+          "name": "PostgreSQL DLQ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate processing results\nconst items = $input.all();\n\nconst resolved = items.filter(i => i.json.status === 'RESOLVED' || i.json.new_status === 'RESOLVED').length;\nconst permanent = items.filter(i => i.json.new_status === 'PERMANENT_FAILURE').length;\nconst pending = items.filter(i => i.json.new_status === 'PENDING_RETRY').length;\n\nreturn [{\n  json: {\n    processed_at: new Date().toISOString(),\n    total_processed: items.length,\n    resolved: resolved,\n    permanent_failures: permanent,\n    rescheduled: pending,\n    summary: `Processed ${items.length}: ${resolved} resolved, ${permanent} permanent, ${pending} rescheduled`\n  }\n}];"
+      },
+      "id": "aggregate-016",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// No items to process\nreturn [{\n  json: {\n    processed_at: new Date().toISOString(),\n    total_processed: 0,\n    resolved: 0,\n    permanent_failures: 0,\n    rescheduled: 0,\n    summary: 'No items ready for retry'\n  }\n}];"
+      },
+      "id": "no-items-017",
+      "name": "No Items Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 400]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Query Ready Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Ready Items": {
+      "main": [
+        [
+          {
+            "node": "Has Items?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Items?": {
+      "main": [
+        [
+          {
+            "node": "Process Each Item",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Items Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Each Item": {
+      "main": [
+        [
+          {
+            "node": "Mark In Progress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark In Progress": {
+      "main": [
+        [
+          {
+            "node": "Calculate Retry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Retry": {
+      "main": [
+        [
+          {
+            "node": "Attempt Retry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attempt Retry": {
+      "main": [
+        [
+          {
+            "node": "Retry Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Success?": {
+      "main": [
+        [
+          {
+            "node": "Mark Resolved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Calculate Next Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Resolved": {
+      "main": [
+        [
+          {
+            "node": "Notify Resolved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Next Action": {
+      "main": [
+        [
+          {
+            "node": "Is Permanent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Permanent?": {
+      "main": [
+        [
+          {
+            "node": "Mark Permanent Failure",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Schedule Next Retry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Permanent Failure": {
+      "main": [
+        [
+          {
+            "node": "Alert Permanent Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null
+}

@@ -1,0 +1,204 @@
+{
+  "name": "Consultation Form to CRM",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "consultation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Consultation Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "consultation"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse and validate webhook data\nconst input = $input.first().json.body;\n\n// Extract name parts\nconst nameParts = input.data.name?.split(' ') || ['Unknown'];\nconst firstName = nameParts[0];\nconst lastName = nameParts.slice(1).join(' ') || '';\n\n// Format tech stack\nconst techStack = Array.isArray(input.data.techStack) \n  ? input.data.techStack.join(', ') \n  : input.data.techStack || '';\n\n// Format compliance\nconst compliance = Array.isArray(input.data.compliance)\n  ? input.data.compliance.join(', ')\n  : input.data.compliance || '';\n\nreturn [{\n  json: {\n    person: {\n      firstName,\n      lastName,\n      email: input.data.email,\n      jobTitle: input.data.role,\n      securityLevel: input.data.securityLevel,\n      techStack,\n      compliance\n    },\n    company: {\n      name: input.data.company,\n      teamSize: input.data.teamSize\n    },\n    note: {\n      message: input.data.message,\n      submittedAt: input.metadata?.submittedAt\n    }\n  }\n}];"
+      },
+      "id": "code-node",
+      "name": "Process Form Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.TWENTY_BASE_URL }}/rest/people",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "name": {
+            "firstName": "={{ $json.person.firstName }}",
+            "lastName": "={{ $json.person.lastName }}"
+          },
+          "emails": {
+            "primaryEmail": "={{ $json.person.email }}",
+            "additionalEmails": []
+          },
+          "jobTitle": "={{ $json.person.jobTitle }}"
+        },
+        "options": {}
+      },
+      "id": "create-person",
+      "name": "Create Person",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.TWENTY_BASE_URL }}/rest/companies",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "name": "={{ $json.company.name }}"
+        },
+        "options": {}
+      },
+      "id": "create-company",
+      "name": "Create Company",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "position",
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "person.email",
+              "field2": "person.email"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "merge-node",
+      "name": "Merge Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.TWENTY_BASE_URL }}/rest/notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({\n  title: `Consultation Request - ${$json[0].json.company.name}`,\n  body: `${$json[0].json.note.message}\\n\\n---\\n\\n**Additional Information:**\\n\\n- **Name:** ${$json[0].json.person.firstName} ${$json[0].json.person.lastName}\\n- **Role:** ${$json[0].json.person.jobTitle}\\n- **Email:** ${$json[0].json.person.email}\\n- **Company:** ${$json[0].json.company.name}\\n- **Team Size:** ${$json[0].json.company.teamSize}\\n- **Tech Stack:** ${$json[0].json.person.techStack}\\n- **Security Level:** ${$json[0].json.person.securityLevel}\\n- **Compliance:** ${$json[0].json.person.compliance}\\n\\nSubmitted: ${$json[0].json.note.submittedAt || new Date().toISOString()}`,\n  relations: [\n    {\n      targetObject: 'person',\n      targetId: $json[0].json.createPerson?.data?.id\n    },\n    {\n      targetObject: 'company',\n      targetId: $json[1].json.createCompany?.data?.id\n    }\n  ].filter(r => r.targetId)\n}) }}",
+        "options": {}
+      },
+      "id": "create-note",
+      "name": "Create Note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: "Form submitted successfully" }) }}"
+      },
+      "id": "response-node",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Consultation Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Form Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Form Data": {
+      "main": [
+        [
+          {
+            "node": "Create Person",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Person": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Company": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Results": {
+      "main": [
+        [
+          {
+            "node": "Create Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Note": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": []
+}

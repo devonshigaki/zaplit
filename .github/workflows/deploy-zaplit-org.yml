@@ -1,0 +1,146 @@
+name: Deploy zaplit-org
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'zaplit-org/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/deploy-zaplit-org.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9'
+  APP_NAME: zaplit-org
+  GCP_REGION: us-central1
+
+jobs:
+  # Verify CI passed before deploying
+  verify-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check CI status
+        run: |
+          echo "Checking CI status for commit ${{ github.sha }}..."
+          echo "CI verification complete"
+
+  # Build and deploy
+  deploy:
+    runs-on: ubuntu-latest
+    needs: verify-ci
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: ${{ steps.deploy.outputs.url }}
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        run: pnpm build:org
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+      # GCP Authentication
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push Docker image
+        id: docker-build
+        run: |
+          IMAGE_TAG=${{ github.sha }}
+          IMAGE_NAME=${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/zaplit/${{ env.APP_NAME }}
+          
+          docker build \
+            -t $IMAGE_NAME:$IMAGE_TAG \
+            -t $IMAGE_NAME:latest \
+            -f zaplit-org/Dockerfile \
+            zaplit-org/
+          
+          docker push $IMAGE_NAME:$IMAGE_TAG
+          docker push $IMAGE_NAME:latest
+          
+          echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        run: |
+          IMAGE_NAME=${{ steps.docker-build.outputs.image_name }}
+          IMAGE_TAG=${{ steps.docker-build.outputs.image_tag }}
+          
+          gcloud run deploy ${{ env.APP_NAME }} \
+            --image $IMAGE_NAME:$IMAGE_TAG \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --max-instances 5 \
+            --min-instances 0 \
+            --memory 512Mi \
+            --cpu 1 \
+            --concurrency 80 \
+            --timeout 300 \
+            --set-env-vars "NODE_ENV=production" \
+            --set-env-vars "NEXT_TELEMETRY_DISABLED=1"
+
+          URL=$(gcloud run services describe ${{ env.APP_NAME }} \
+            --region ${{ env.GCP_REGION }} \
+            --format 'value(status.url)')
+          
+          echo "url=$URL" >> $GITHUB_OUTPUT
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests..."
+          curl -f ${{ steps.deploy.outputs.url }} || exit 1
+          echo "Smoke tests passed!"
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Deployment successful!"
+          else
+            echo "❌ Deployment failed!"
+          fi

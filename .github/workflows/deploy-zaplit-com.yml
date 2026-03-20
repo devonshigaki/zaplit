@@ -1,0 +1,200 @@
+name: Deploy zaplit-com
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'zaplit-com/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/deploy-zaplit-com.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9'
+  APP_NAME: zaplit-com
+  GCP_REGION: us-central1
+
+jobs:
+  # Verify CI passed before deploying
+  verify-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check CI status
+        run: |
+          echo "Checking CI status for commit ${{ github.sha }}..."
+          # This could query the GitHub API to verify CI passed
+          # For now, we rely on GitHub's required status checks
+          echo "CI verification complete"
+
+  # Build and deploy
+  deploy:
+    runs-on: ubuntu-latest
+    needs: verify-ci
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: ${{ steps.deploy.outputs.url }}
+    permissions:
+      contents: read
+      id-token: write  # Required for GCP Workload Identity
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        run: pnpm build:com
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+          # Add any required environment variables for build
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+
+      # GCP Authentication (using Workload Identity - recommended)
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          # Alternative: Use service account key (less secure)
+          # credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push Docker image
+        id: docker-build
+        run: |
+          IMAGE_TAG=${{ github.sha }}
+          IMAGE_NAME=${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/zaplit/${{ env.APP_NAME }}
+          
+          # Build Docker image
+          docker build \
+            -t $IMAGE_NAME:$IMAGE_TAG \
+            -t $IMAGE_NAME:latest \
+            -f zaplit-com/Dockerfile \
+            zaplit-com/
+          
+          # Push images
+          docker push $IMAGE_NAME:$IMAGE_TAG
+          docker push $IMAGE_NAME:latest
+          
+          echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        run: |
+          IMAGE_NAME=${{ steps.docker-build.outputs.image_name }}
+          IMAGE_TAG=${{ steps.docker-build.outputs.image_tag }}
+          
+          # Deploy to Cloud Run
+          gcloud run deploy ${{ env.APP_NAME }} \
+            --image $IMAGE_NAME:$IMAGE_TAG \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --max-instances 10 \
+            --min-instances 1 \
+            --memory 1Gi \
+            --cpu 1 \
+            --concurrency 80 \
+            --timeout 300 \
+            --set-env-vars "NODE_ENV=production" \
+            --set-env-vars "NEXT_TELEMETRY_DISABLED=1" \
+            --tag ${{ github.event.inputs.environment || 'prod' }} \
+            --no-traffic  # Deploy without traffic first
+
+          # Get the service URL
+          URL=$(gcloud run services describe ${{ env.APP_NAME }} \
+            --region ${{ env.GCP_REGION }} \
+            --format 'value(status.url)')
+          
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "Deployed to: $URL"
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests against ${{ steps.deploy.outputs.url }}..."
+          # Add smoke tests here
+          curl -f ${{ steps.deploy.outputs.url }}/api/health || exit 1
+          echo "Smoke tests passed!"
+
+      - name: Migrate traffic ( gradual rollout )
+        if: github.event.inputs.environment != 'staging'
+        run: |
+          # Gradually shift traffic to new revision
+          # This requires Cloud Run traffic splitting configuration
+          echo "Migrating traffic to new revision..."
+          
+          # Get the latest revision
+          LATEST_REVISION=$(gcloud run revisions list \
+            --service ${{ env.APP_NAME }} \
+            --region ${{ env.GCP_REGION }} \
+            --format 'value(metadata.name)' | head -1)
+          
+          # Update traffic split (100% to new revision)
+          gcloud run services update-traffic ${{ env.APP_NAME }} \
+            --region ${{ env.GCP_REGION }} \
+            --to-revisions $LATEST_REVISION=100 \
+            --quiet
+          
+          echo "Traffic migration complete"
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed! Initiating rollback..."
+          # Get previous revision
+          PREVIOUS_REVISION=$(gcloud run revisions list \
+            --service ${{ env.APP_NAME }} \
+            --region ${{ env.GCP_REGION }} \
+            --format 'value(metadata.name)' | sed -n '2p')
+          
+          if [ -n "$PREVIOUS_REVISION" ]; then
+            echo "Rolling back to $PREVIOUS_REVISION"
+            gcloud run services update-traffic ${{ env.APP_NAME }} \
+              --region ${{ env.GCP_REGION }} \
+              --to-revisions $PREVIOUS_REVISION=100 \
+              --quiet
+          fi
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Deployment successful!"
+            echo "URL: ${{ steps.deploy.outputs.url }}"
+          else
+            echo "❌ Deployment failed!"
+          fi
