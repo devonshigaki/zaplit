@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "security:verify-encryption": "ts-node src/security/verify-encryption-key.ts",
     "security:enable-auth": "ts-node src/security/enable-basic-auth.ts",
     "dr:backup-db": "ts-node src/dr/backup-database.ts",

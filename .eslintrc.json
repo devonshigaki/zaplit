@@ -2,18 +2,17 @@
   "$schema": "https://json.schemastore.org/eslintrc",
   "root": true,
   "extends": [
-    "next/core-web-vitals"
+    "eslint:recommended"
   ],
   "ignorePatterns": [
     "node_modules/",
     ".next/",
     "dist/",
     "*.config.js",
-    "*.config.mjs"
+    "*.config.mjs",
+    "*.config.ts"
   ],
   "rules": {
-    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
-    "@typescript-eslint/no-explicit-any": "warn",
-    "react-hooks/exhaustive-deps": "warn"
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
   }
 }
