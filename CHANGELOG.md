@@ -1,7 +1,7 @@
 
-## [2.13.0] - 2026-03-20
+## [2.13.0] - 2026-03-21
 
-### 🔬 Deep Research Phase 8 - INTEGRATION & CLEANUP
+### 🔬 Deep Research Phase 8 - INTEGRATION & CLEANUP - COMPLETE
 
 #### Research Agents Deployed
 
@@ -102,6 +102,64 @@ Forms (Next.js) → API → n8n → Twenty CRM + Brevo Email
 5. Set up Brevo API credentials
 6. Add DKIM DNS record
 7. Request GCP PTR record
+
+---
+
+#### GCP Infrastructure Setup - COMPLETED
+
+**GCP Resources Configured:**
+
+| Resource | Status | Details |
+|----------|--------|---------|
+| n8n Server (VM) | ✅ Running | 34.132.198.35, webhooks active |
+| Twenty CRM (VM) | ✅ Running | 34.122.83.0, API healthy |
+| Hestia Mail (VM) | ✅ Running | 136.113.99.87, firewall opened |
+| zaplit-com (Cloud Run) | ✅ Deployed | https://zaplit-com-650809736894.us-central1.run.app |
+| zaplit-org (Cloud Run) | ✅ Deployed | https://zaplit-org-650809736894.us-central1.run.app |
+
+**Secrets Created in GCP Secret Manager:**
+- `ip-hash-salt` - Generated (32-byte hex)
+- `brevo-api-key` - Placeholder (needs update from Brevo dashboard)
+- `brevo-smtp-key` - Placeholder (needs update from Brevo dashboard)
+- `brevo-webhook-secret` - Generated (32-byte hex)
+- `sentry-dsn` - Placeholder (needs Sentry project)
+- `logo-dev-token` - Placeholder (needs logo.dev account)
+
+**Firewall Rules Created:**
+```bash
+gcloud compute firewall-rules create allow-hestia-mail \
+  --allow=tcp:25,tcp:587,tcp:465,tcp:993,tcp:995,tcp:8083
+```
+
+**Cloud Run Services Updated:**
+- Added IP_HASH_SALT secret
+- Added BREVO_API_KEY secret
+- Added SENTRY_DSN secret
+- Added LOGO_DEV_TOKEN secret
+- Added NODE_ENV=production
+- Added SERVICE_NAME=zaplit-com/org
+- Added NEXT_TELEMETRY_DISABLED=1
+- Added n8n webhook URLs
+
+**End-to-End Integration Test:**
+```
+User Form → Cloud Run → n8n Webhook → ✅ SUCCESS
+```
+- Form submission: ✅ Working
+- n8n webhook received: ✅ Working
+- Execution recorded: ✅ Working
+
+**DNS Records to Add (see docs/DNS_CONFIGURATION_REQUIRED.md):**
+- MX record: @ → mail.zaplit.com (priority 10)
+- DKIM record: mail._domainkey.zaplit.com
+- SPF record update: Merge dual records
+
+**Still Required (Manual):**
+1. Update BREVO_API_KEY with actual key from Brevo dashboard
+2. Update BREVO_SMTP_KEY with actual key from Brevo dashboard
+3. Add MX and DKIM DNS records in Namecheap
+4. Request PTR record from GCP Support
+5. Create Sentry project and update SENTRY_DSN
 
 ---
 
