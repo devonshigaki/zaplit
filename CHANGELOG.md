@@ -147,6 +147,51 @@ User Form → Cloud Run → n8n Webhook → ✅ SUCCESS
 ```
 - Form submission: ✅ Working
 - n8n webhook received: ✅ Working
+
+---
+
+#### GCP Security & Infrastructure Hardening - COMPLETED
+
+**Cost Optimization:**
+- ✅ Deleted unused static IP (zaplit-static-ip) - saving $7/month
+
+**Backup & DR:**
+- ✅ Created VM snapshot schedule (daily-snapshot)
+  - Schedule: 4 AM daily
+  - Retention: 30 days
+  - Location: us-central1
+
+**Security Improvements:**
+- ✅ Created custom Cloud Run service account (zaplit-cloudrun@)
+  - Minimal permissions: secretAccessor, logWriter, metricWriter
+  - Removed dependency on default compute SA with Editor role
+- ✅ Updated both zaplit-com and zaplit-org to use custom SA
+- ✅ Configured Brevo SMTP relay on Hestia server
+- ✅ Requested GCP PTR record for mail server
+
+**Infrastructure Findings (from research agents):**
+
+| Category | Score | Issues |
+|----------|-------|--------|
+| Security | 72/100 | Secure boot disabled, overly permissive firewall rules |
+| Infrastructure | 65/100 | No load balancing, no CDN, single points of failure |
+| Cost | 80/100 | Unused IPs deleted, premium tier in use |
+| Monitoring | 50/100 | Limited uptime checks, no alerting policies |
+
+**Critical Issues Found:**
+1. 🔴 Twenty CRM API key is REVOKED - needs regeneration in CRM UI
+2. 🔴 Missing MX record for email
+3. 🔴 Missing DKIM record for email
+4. 🟡 SSH open to 0.0.0.0/0 on all VMs
+5. 🟡 default-allow-internal firewall rule allows all ports
+6. 🟡 Cloud Armor WAF has no rules configured
+
+**Still Required (Manual):**
+1. Generate new API key in Twenty CRM and update `twenty-api-key` secret
+2. Add MX, DKIM, and fix SPF DNS records in Namecheap
+3. Update Brevo SMTP credentials in Hestia config
+4. Create newsletter webhook in n8n UI
+5. Set up Sentry project and update `sentry-dsn` secret
 - Execution recorded: ✅ Working
 
 **DNS Records to Add (see docs/DNS_CONFIGURATION_REQUIRED.md):**
