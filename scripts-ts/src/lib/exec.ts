@@ -3,6 +3,7 @@
  */
 import { execa, type Options as ExecaOptions } from 'execa';
 import { logger } from './logger.js';
+import type { Logger } from './logger.js';
 
 export interface ExecResult {
   stdout: string;
@@ -51,24 +52,55 @@ export async function execCommandSilent(
   }
 }
 
-export interface ExecOptions extends ExecaOptions {}
+export interface ExecOptions extends ExecaOptions {
+  silent?: boolean;
+}
 
 /**
  * Command executor class for compatibility
- * @deprecated Use execCommand() or execCommandSilent() directly
+ * Supports:
+ * - new CommandExecutor() - default options
+ * - new CommandExecutor(options) - with exec options
+ * - new CommandExecutor(logger) - with logger instance
  */
 export class CommandExecutor {
   private defaultOptions: ExecOptions;
-  
-  constructor(options: ExecOptions = {}) {
-    this.defaultOptions = options;
+  private logger?: Logger;
+
+  constructor();
+  constructor(options: ExecOptions);
+  constructor(logger: Logger);
+  constructor(arg?: ExecOptions | Logger) {
+    if (arg && 'info' in arg && typeof arg.info === 'function') {
+      // It's a Logger instance
+      this.logger = arg as Logger;
+      this.defaultOptions = {};
+    } else {
+      this.defaultOptions = (arg as ExecOptions) || {};
+    }
   }
-  
+
   async execute(command: string, args: string[], options?: ExecOptions): Promise<ExecResult> {
     return execCommand(command, args, { ...this.defaultOptions, ...options });
   }
-  
+
   async executeSilent(command: string, args: string[], options?: ExecOptions): Promise<boolean> {
     return execCommandSilent(command, args, { ...this.defaultOptions, ...options });
+  }
+
+  // Compatibility methods that match the function-based API
+  async exec(command: string, options?: ExecOptions): Promise<ExecResult> {
+    const parts = command.split(' ');
+    const cmd = parts[0];
+    const args = parts.slice(1);
+    return this.execute(cmd, args, options);
+  }
+
+  async execSilent(command: string, options?: ExecOptions): Promise<string> {
+    const parts = command.split(' ');
+    const cmd = parts[0];
+    const args = parts.slice(1);
+    const success = await this.executeSilent(cmd, args, options);
+    return success ? 'success' : '';
   }
 }

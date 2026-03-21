@@ -28,7 +28,7 @@
   ],
   "scripts": {
     "build": "tsup && pnpm build:css",
-    "build:css": "tailwindcss -i ./src/styles/globals.css -o ./dist/styles.css --minify",
+    "build:css": "npx tailwindcss -i ./src/styles/globals.css -o ./dist/styles.css --minify",
     "dev": "tsup --watch",
     "dev:css": "tailwindcss -i ./src/styles/globals.css -o ./dist/styles.css --watch",
     "typecheck": "tsc --noEmit",
