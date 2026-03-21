@@ -157,6 +157,6 @@ export async function closeRedisConnection(): Promise<void> {
   if (global.__redisClient) {
     await global.__redisClient.quit();
     global.__redisClient = undefined;
-    console.log('[REDIS] Connection closed gracefully');
+    logger.info('Redis connection closed gracefully');
   }
 }

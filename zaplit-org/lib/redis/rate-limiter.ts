@@ -256,7 +256,7 @@ export async function getRateLimitStatus(ip: string): Promise<RateLimitResult> {
           : undefined,
       };
     } catch (error) {
-      console.error('[RATE_LIMIT] Redis error:', error);
+      logger.error({ error: error instanceof Error ? error.message : String(error) }, 'Redis rate limit error');
     }
   }
 

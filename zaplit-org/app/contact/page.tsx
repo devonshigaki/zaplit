@@ -57,7 +57,7 @@ export default function ContactPage() {
 
       setSubmitted(true)
     } catch (err) {
-      console.error("Form submission error:", err)
+      // Error handled by form submission hook
       setError(err instanceof Error ? err.message : "An error occurred. Please try again.")
     } finally {
       setIsSubmitting(false)
