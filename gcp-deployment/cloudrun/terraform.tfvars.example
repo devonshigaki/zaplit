@@ -1,0 +1,27 @@
+# Copy to terraform.tfvars and fill in your values
+
+project_id = "your-project-id"
+region     = "us-central1"
+environment = "production"
+
+# Alert notification channels (optional)
+alert_notification_channels = []
+
+# Service-specific configurations (optional - defaults are optimized)
+zaplit_com_config = {
+  memory          = "512Mi"
+  cpu             = "1000m"
+  min_instances   = 0
+  max_instances   = 20
+  concurrency     = 100
+  timeout_seconds = 300
+}
+
+zaplit_org_config = {
+  memory          = "256Mi"
+  cpu             = "1000m"
+  min_instances   = 0
+  max_instances   = 10
+  concurrency     = 100
+  timeout_seconds = 300
+}

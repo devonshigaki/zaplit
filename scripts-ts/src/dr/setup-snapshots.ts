@@ -7,9 +7,9 @@
  * Usage: npx ts-node setup-snapshots.ts [VM_NAME] [ZONE]
  */
 
-import { Logger } from '../lib/logger';
-import { GCloudClient, createGCloudClient } from '../lib/gcloud';
-import { CommandExecutor } from '../lib/exec';
+import { Logger } from '../lib/logger.js';
+import { GCloudClient, createGCloudClient } from '../lib/gcloud.js';
+import { CommandExecutor } from '../lib/exec.js';
 
 interface SnapshotConfig {
   vmName: string;

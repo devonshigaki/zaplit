@@ -2,8 +2,10 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, ArrowLeft, Check, Terminal } from "lucide-react"
+import { ArrowRight, ArrowLeft, Check, Terminal, AlertCircle, Loader2 } from "lucide-react"
 import { Boxes } from "@/components/ui/background-boxes"
+import { useFormSubmission } from "@/lib/form-submission"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 const techStacks = {
   CRM: ["Salesforce", "HubSpot", "Pipedrive", "Zoho", "None"],
@@ -30,6 +32,9 @@ const securityLevels = [
 export function BookDemoSection() {
   const [step, setStep] = useState(1)
   const [submitted, setSubmitted] = useState(false)
+  const [submissionId, setSubmissionId] = useState<string>()
+  const { submitForm, isSubmitting, error, resetError } = useFormSubmission()
+  
   const [formData, setFormData] = useState({
     name: "",
     company: "",
@@ -61,8 +66,41 @@ export function BookDemoSection() {
     return true
   }
 
-  const handleSubmit = () => {
-    setSubmitted(true)
+  const handleSubmit = async () => {
+    resetError()
+    
+    // Convert techStack object to array format expected by API
+    const techStackArray = Object.entries(formData.techStack).map(
+      ([category, tool]) => `${category}: ${tool}`
+    )
+    
+    const result = await submitForm({
+      formType: "consultation",
+      data: {
+        name: formData.name,
+        company: formData.company,
+        email: formData.email,
+        role: formData.role,
+        teamSize: formData.teamSize,
+        securityLevel: formData.securityLevel,
+        techStack: techStackArray,
+        compliance: formData.compliance,
+        message: formData.message,
+      },
+      metadata: {
+        url: typeof window !== "undefined" ? window.location.href : "",
+      },
+    })
+
+    if (result.success) {
+      setSubmissionId(result.id)
+      setSubmitted(true)
+    }
+  }
+
+  const handleStepChange = (newStep: number) => {
+    resetError()
+    setStep(newStep)
   }
 
   const TOTAL_STEPS = 3
@@ -87,6 +125,14 @@ export function BookDemoSection() {
           </p>
         </div>
 
+        {/* Error Display */}
+        {error && (
+          <Alert variant="destructive" className="max-w-lg mx-auto mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         {submitted ? (
           /* Success State */
           <div className="max-w-lg mx-auto text-center">
@@ -98,273 +144,280 @@ export function BookDemoSection() {
               We review each submission manually. Expect a response within one business day at{" "}
               <span className="text-foreground font-mono text-sm">{formData.email}</span>.
             </p>
-            <div className="bg-background border border-border rounded-xl p-6 text-left space-y-3">
-              <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-4">Summary</p>
-              {[
-                ["Contact", formData.name],
-                ["Organization", formData.company],
-                ["Role", formData.role],
-                ["Security level", securityLevels.find(s => s.id === formData.securityLevel)?.label ?? formData.securityLevel],
-                ["Compliance", formData.compliance.length ? formData.compliance.join(", ").toUpperCase() : "None"],
-              ].map(([k, v]) => (
-                <div key={k} className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{k}</span>
-                  <span className="font-mono">{v}</span>
+            {submissionId && (
+              <p className="text-xs font-mono text-muted-foreground">
+                Reference: {submissionId}
+              </p>
+            )}
+          </div>
+        ) : (
+          /* Form */
+          <div className="max-w-2xl mx-auto">
+            {/* Progress Steps */}
+            <div className="flex items-center justify-center gap-4 mb-12">
+              {[1, 2, 3].map((s) => (
+                <div key={s} className="flex items-center gap-4">
+                  <button
+                    onClick={() => s < step && handleStepChange(s)}
+                    className={`w-10 h-10 rounded-full border-2 flex items-center justify-center font-mono text-sm transition-colors ${
+                      s === step
+                        ? "border-foreground bg-foreground text-background"
+                        : s < step
+                        ? "border-foreground bg-foreground/10"
+                        : "border-border text-muted-foreground"
+                    } ${s < step ? "cursor-pointer hover:bg-foreground/20" : "cursor-default"}`}
+                    disabled={s >= step}
+                  >
+                    {s < step ? <Check className="w-4 h-4" /> : s}
+                  </button>
+                  {s < TOTAL_STEPS && (
+                    <div className={`w-16 h-px ${s < step ? "bg-foreground" : "bg-border"}`} />
+                  )}
                 </div>
               ))}
             </div>
-          </div>
-        ) : (
-          <div className="max-w-2xl mx-auto bg-card/95 backdrop-blur-sm border border-border rounded-xl p-6 md:p-8">
-            {/* Step indicator */}
-            <div className="flex items-center gap-3 mb-10">
-              {Array.from({ length: TOTAL_STEPS }).map((_, i) => {
-                const s = i + 1
-                const active = s === step
-                const done = s < step
-                return (
-                  <div key={s} className="flex items-center gap-3 flex-1">
-                    <div className={`w-7 h-7 rounded-full border flex items-center justify-center flex-shrink-0 text-xs font-mono transition-colors ${
-                      done ? "bg-foreground border-foreground text-background" :
-                      active ? "border-foreground text-foreground" :
-                      "border-border text-muted-foreground"
-                    }`}>
-                      {done ? <Check className="w-3.5 h-3.5" /> : s}
-                    </div>
-                    <span className={`text-sm hidden sm:block transition-colors ${active ? "text-foreground" : "text-muted-foreground"}`}>
-                      {["Contact", "Tech stack", "Security"][i]}
-                    </span>
-                    {s < TOTAL_STEPS && <div className={`h-px flex-1 transition-colors ${done ? "bg-foreground" : "bg-border"}`} />}
-                  </div>
-                )
-              })}
-            </div>
 
-            {/* Step 1 — Contact */}
-            {step === 1 && (
-              <div className="space-y-5">
-                <div>
-                  <h3 className="text-xl font-medium mb-1">Organization information</h3>
-                  <p className="text-sm text-muted-foreground">Tell us about your nonprofit</p>
+            {/* Form Card */}
+            <div className="border border-border bg-card/50 backdrop-blur-sm rounded-xl p-8">
+              {step === 1 && (
+                <div className="space-y-6">
+                  <h3 className="text-xl font-medium mb-6">About you</h3>
+                  
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Name *</label>
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                        className="w-full h-11 px-4 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                        placeholder="Your name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Organization *</label>
+                      <input
+                        type="text"
+                        value={formData.company}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, company: e.target.value }))}
+                        className="w-full h-11 px-4 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                        placeholder="Organization name"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Email *</label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                        className="w-full h-11 px-4 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                        placeholder="you@organization.org"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Role *</label>
+                      <input
+                        type="text"
+                        value={formData.role}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, role: e.target.value }))}
+                        className="w-full h-11 px-4 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                        placeholder="e.g. Operations Director"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Team Size</label>
+                    <select
+                      value={formData.teamSize}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, teamSize: e.target.value }))}
+                      className="w-full h-11 px-4 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">Select team size...</option>
+                      <option value="1-10">1-10 people</option>
+                      <option value="11-50">11-50 people</option>
+                      <option value="51-200">51-200 people</option>
+                      <option value="201+">201+ people</option>
+                    </select>
+                  </div>
+
+                  <div className="pt-4">
+                    <Button
+                      onClick={() => handleStepChange(2)}
+                      disabled={!canProceed()}
+                      className="w-full h-12"
+                    >
+                      Continue
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-sm font-medium mb-2">Name</label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:border-foreground focus:outline-none transition-colors text-sm font-mono"
-                      placeholder="Your name"
-                    />
+              )}
+
+              {step === 2 && (
+                <div className="space-y-6">
+                  <h3 className="text-xl font-medium mb-2">Current stack</h3>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Select at least 3 categories. This helps us understand integration requirements.
+                  </p>
+
+                  <div className="space-y-4 max-h-80 overflow-y-auto pr-2">
+                    {Object.entries(techStacks).map(([category, tools]) => (
+                      <div key={category} className="border border-border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="font-medium text-sm">{category}</span>
+                          {formData.techStack[category] && (
+                            <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded">
+                              {formData.techStack[category]}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {tools.map((tool) => (
+                            <button
+                              key={tool}
+                              onClick={() => updateTechStack(category, tool)}
+                              className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                                formData.techStack[category] === tool
+                                  ? "bg-foreground text-background border-foreground"
+                                  : "bg-transparent border-border hover:border-foreground/50"
+                              }`}
+                            >
+                              {tool}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-sm font-medium mb-2">Role</label>
-                    <input
-                      type="text"
-                      value={formData.role}
-                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                      className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:border-foreground focus:outline-none transition-colors text-sm font-mono"
-                      placeholder="Executive Director, Development Director…"
-                    />
+
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleStepChange(1)}
+                      className="h-12 px-6"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Back
+                    </Button>
+                    <Button
+                      onClick={() => handleStepChange(3)}
+                      disabled={!canProceed()}
+                      className="flex-1 h-12"
+                    >
+                      Continue
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
                   </div>
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium mb-2">Organization</label>
-                    <input
-                      type="text"
-                      value={formData.company}
-                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                      className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:border-foreground focus:outline-none transition-colors text-sm font-mono"
-                      placeholder="Organization name"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium mb-2">Work email</label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:border-foreground focus:outline-none transition-colors text-sm font-mono"
-                      placeholder="you@organization.org"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium mb-2">Staff size</label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {["1–10", "11–50", "51–200", "200+"].map((size) => (
-                        <button
-                          key={size}
-                          type="button"
-                          onClick={() => setFormData({ ...formData, teamSize: size })}
-                          className={`px-3 py-2.5 rounded-lg border text-sm font-mono transition-colors ${
-                            formData.teamSize === size
-                              ? "border-foreground bg-secondary text-foreground"
-                              : "border-border text-muted-foreground hover:border-muted-foreground"
+                </div>
+              )}
+
+              {step === 3 && (
+                <div className="space-y-6">
+                  <h3 className="text-xl font-medium mb-2">Security & Requirements</h3>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-3">Security Level</label>
+                    <div className="grid gap-3">
+                      {securityLevels.map((level) => (
+                        <label
+                          key={level.id}
+                          className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
+                            formData.securityLevel === level.id
+                              ? "border-foreground bg-foreground/5"
+                              : "border-border hover:border-foreground/30"
                           }`}
                         >
-                          {size}
-                        </button>
+                          <input
+                            type="radio"
+                            name="security"
+                            value={level.id}
+                            checked={formData.securityLevel === level.id}
+                            onChange={(e) =>
+                              setFormData((prev) => ({ ...prev, securityLevel: e.target.value }))
+                            }
+                            className="mt-0.5"
+                          />
+                          <div>
+                            <div className="font-medium text-sm">{level.label}</div>
+                            <div className="text-xs text-muted-foreground">{level.description}</div>
+                          </div>
+                        </label>
                       ))}
                     </div>
                   </div>
-                </div>
-              </div>
-            )}
 
-            {/* Step 2 — Tech Stack */}
-            {step === 2 && (
-              <div className="space-y-5">
-                <div>
-                  <h3 className="text-xl font-medium mb-1">Current tech stack</h3>
-                  <p className="text-sm text-muted-foreground">Select at least 3 categories so we can map your integrations.</p>
-                </div>
-                <div className="space-y-3">
-                  {Object.entries(techStacks).map(([category, options]) => (
-                    <div key={category} className="grid grid-cols-[120px_1fr] items-center gap-4">
-                      <label className="text-sm font-medium text-muted-foreground">{category}</label>
-                      <div className="flex flex-wrap gap-2">
-                        {options.map((opt) => (
-                          <button
-                            key={opt}
-                            type="button"
-                            onClick={() => updateTechStack(category, formData.techStack[category] === opt ? "" : opt)}
-                            className={`px-3 py-1.5 rounded-md border text-xs font-mono transition-colors ${
-                              formData.techStack[category] === opt
-                                ? "border-foreground bg-secondary text-foreground"
-                                : "border-border text-muted-foreground hover:border-muted-foreground"
-                            }`}
-                          >
-                            {opt}
-                          </button>
-                        ))}
-                      </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-3">Compliance Requirements</label>
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      {complianceOptions.map((option) => (
+                        <label
+                          key={option.id}
+                          className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                            formData.compliance.includes(option.id)
+                              ? "border-foreground bg-foreground/5"
+                              : "border-border hover:border-foreground/30"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={formData.compliance.includes(option.id)}
+                            onChange={() => toggleCompliance(option.id)}
+                            className="mt-0.5"
+                          />
+                          <div>
+                            <div className="font-medium text-sm">{option.label}</div>
+                            <div className="text-xs text-muted-foreground">{option.description}</div>
+                          </div>
+                        </label>
+                      ))}
                     </div>
-                  ))}
-                </div>
-                <p className="text-xs font-mono text-muted-foreground">
-                  {Object.values(formData.techStack).filter(Boolean).length} / {Object.keys(techStacks).length} categories selected
-                </p>
-              </div>
-            )}
+                  </div>
 
-            {/* Step 3 — Security */}
-            {step === 3 && (
-              <div className="space-y-7">
-                <div>
-                  <h3 className="text-xl font-medium mb-1">Security & compliance</h3>
-                  <p className="text-sm text-muted-foreground">Helps us configure the right isolation level from day one.</p>
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Additional Context</label>
+                    <textarea
+                      value={formData.message}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, message: e.target.value }))}
+                      rows={3}
+                      className="w-full px-4 py-3 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                      placeholder="What workflows are you looking to automate? Any specific requirements?"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-3">Security priority</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {securityLevels.map((level) => (
-                      <button
-                        key={level.id}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, securityLevel: level.id })}
-                        className={`p-4 rounded-lg border text-left transition-colors ${
-                          formData.securityLevel === level.id
-                            ? "border-foreground bg-secondary"
-                            : "border-border hover:border-muted-foreground"
-                        }`}
-                      >
-                        <p className="text-sm font-medium mb-1">{level.label}</p>
-                        <p className="text-xs text-muted-foreground leading-snug">{level.description}</p>
-                      </button>
-                    ))}
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleStepChange(2)}
+                      disabled={isSubmitting}
+                      className="h-12 px-6"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Back
+                    </Button>
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={isSubmitting}
+                      className="flex-1 h-12"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          <Terminal className="w-4 h-4 mr-2" />
+                          Submit Request
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-3">Compliance requirements</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {complianceOptions.map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => toggleCompliance(opt.id)}
-                        className={`p-4 rounded-lg border text-left flex items-start justify-between gap-2 transition-colors ${
-                          formData.compliance.includes(opt.id)
-                            ? "border-foreground bg-secondary"
-                            : "border-border hover:border-muted-foreground"
-                        }`}
-                      >
-                        <div>
-                          <p className="text-sm font-medium font-mono">{opt.label}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">{opt.description}</p>
-                        </div>
-                        {formData.compliance.includes(opt.id) && (
-                          <Check className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Anything else we should know?</label>
-                  <textarea
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    rows={3}
-                    className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:border-foreground focus:outline-none transition-colors text-sm font-mono resize-none"
-                    placeholder="Special requirements, timeline, current pain points…"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Navigation */}
-            <div className="flex items-center justify-between mt-10 pt-6 border-t border-border">
-              {step > 1 ? (
-                <button
-                  type="button"
-                  onClick={() => setStep(step - 1)}
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  Back
-                </button>
-              ) : (
-                <div />
               )}
-
-              {step < TOTAL_STEPS ? (
-                <Button
-                  onClick={() => setStep(step + 1)}
-                  disabled={!canProceed()}
-                  className="gap-2"
-                >
-                  Continue
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              ) : (
-                <Button onClick={handleSubmit} className="gap-2">
-                  Submit request
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Trust bar */}
-        {!submitted && (
-          <div className="flex items-center justify-center gap-6 mt-16 pt-8 border-t border-border">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Terminal className="w-3.5 h-3.5" />
-              <span className="font-mono">No pressure, ever</span>
-            </div>
-            <div className="w-px h-4 bg-border" />
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Check className="w-3.5 h-3.5" />
-              <span className="font-mono">Response within 1 business day</span>
-            </div>
-            <div className="w-px h-4 bg-border hidden sm:block" />
-            <div className="items-center gap-2 text-xs text-muted-foreground hidden sm:flex">
-              <Check className="w-3.5 h-3.5" />
-              <span className="font-mono">Mission-aligned setup</span>
             </div>
           </div>
         )}

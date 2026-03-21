@@ -48,6 +48,7 @@ jobs:
   # Install dependencies and cache
   install:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       
@@ -78,6 +79,7 @@ jobs:
   # Type checking
   typecheck:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [install, changes]
     if: ${{ needs.changes.outputs.zaplit-com == 'true' || needs.changes.outputs.zaplit-org == 'true' || needs.changes.outputs.shared == 'true' || github.event_name == 'push' }}
     strategy:
@@ -112,6 +114,7 @@ jobs:
   # Linting
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [install, changes]
     if: ${{ needs.changes.outputs.zaplit-com == 'true' || needs.changes.outputs.zaplit-org == 'true' || needs.changes.outputs.shared == 'true' || github.event_name == 'push' }}
     strategy:
@@ -146,12 +149,12 @@ jobs:
   # Unit tests with Vitest
   unit-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [install, changes]
-    if: ${{ needs.changes.outputs.zaplit-com == 'true' || needs.changes.outputs.shared == 'true' || github.event_name == 'push' }}
+    if: ${{ needs.changes.outputs.zaplit-com == 'true' || needs.changes.outputs.zaplit-org == 'true' || needs.changes.outputs.shared == 'true' || github.event_name == 'push' }}
     strategy:
       matrix:
-        app: [com]
-        # Add 'org' when tests are added to zaplit-org
+        app: [com, org]
     steps:
       - uses: actions/checkout@v4
       
@@ -189,6 +192,7 @@ jobs:
   # Build both apps
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [install, changes, typecheck, lint]
     if: ${{ always() && (needs.typecheck.result == 'success' && needs.lint.result == 'success') }}
     strategy:

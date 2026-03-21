@@ -1,0 +1,43 @@
+{
+  "name": "@zaplit/api",
+  "version": "1.0.0",
+  "description": "Shared API utilities for Zaplit applications",
+  "private": true,
+  "sideEffects": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./response": {
+      "types": "./dist/response.d.ts",
+      "import": "./dist/response.js",
+      "require": "./dist/response.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "next": "^14.0.0 || ^15.0.0 || ^16.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "next": "16.1.7",
+    "tsup": "^8.0.0",
+    "typescript": "5.7.3"
+  }
+}

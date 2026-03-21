@@ -2,16 +2,16 @@
 # Production deployment pipeline
 
 steps:
-  # Step 1: Install dependencies and run tests
+  # Step 1: Install pnpm and dependencies
   - name: 'node:20-slim'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        cd zaplit-org
-        npm ci
-        npm run lint || true
-        npm run typecheck || true
+        npm install -g pnpm@10.32.1
+        pnpm install --frozen-lockfile
+        pnpm lint:org || true
+        pnpm typecheck:org || true
     id: 'install-and-test'
 
   # Step 2: Build container image
@@ -43,8 +43,8 @@ steps:
           --region=us-central1 \
           --platform=managed \
           --allow-unauthenticated \
-          --set-secrets=TWENTY_API_KEY=twenty-api-key:latest,N8N_WEBHOOK_SECRET=n8n-webhook-secret:latest,APP_SECRET=app-secret:latest \
-          --set-env-vars=NODE_ENV=production,NEXT_PUBLIC_SITE_URL=https://zaplit.org \
+          --set-secrets=TWENTY_API_KEY=twenty-api-key:latest,N8N_WEBHOOK_SECRET=n8n-webhook-secret:latest,APP_SECRET=app-secret:latest,SENTRY_DSN=sentry-dsn:latest,IP_HASH_SALT=ip-hash-salt:latest \
+          --set-env-vars=NODE_ENV=production,NEXT_PUBLIC_SITE_URL=https://zaplit.org,SERVICE_NAME=zaplit-org \
           --memory=1Gi \
           --cpu=1 \
           --concurrency=1000 \
@@ -72,4 +72,4 @@ timeout: 900s
 
 images:
   - 'gcr.io/$PROJECT_ID/zaplit-org:$COMMIT_SHA'
-  - 'gcr.io/$PROJECT_ID/zaplit-org:latest'
+  - 'gcr/$PROJECT_ID/zaplit-org:latest'

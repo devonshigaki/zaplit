@@ -6,6 +6,7 @@ import { Terminal, Menu, X, Sun, Moon } from "lucide-react"
 
 const navItems = [
   { label: "Agents", href: "#agents" },
+  { label: "Solutions", href: "#solutions" },
   { label: "Security", href: "#security" },
   { label: "Plans", href: "#plans" },
   { label: "Calculator", href: "#calculator" },

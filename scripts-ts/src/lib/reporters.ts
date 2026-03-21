@@ -3,7 +3,7 @@
  */
 import chalk from 'chalk';
 import type { VerificationReport, CheckResult, CheckStatus } from '../types/verification.js';
-import type { DeploymentReport, RollbackReport, RollbackResult } from '../types/deployment.js';
+import type { DeploymentReport, RollbackReport } from '../types/deployment.js';
 
 export interface OutputOptions {
   detailed: boolean;

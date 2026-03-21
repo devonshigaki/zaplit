@@ -2,7 +2,9 @@
 
 import Image from 'next/image'
 
-const LOGO_TOKEN = 'pk_JbdpxRLTQW-ut_wLl4qEVQ'
+// Logo.dev token - should be moved to environment variable for production
+// This is a public token but should still be externalized
+const LOGO_TOKEN = process.env.NEXT_PUBLIC_LOGO_TOKEN || ''
 
 const integrations = [
   { name: 'Salesforce', category: 'Donor CRM', domain: 'salesforce.com' },
@@ -39,7 +41,7 @@ function IntegrationCard({
           width={48}
           height={48}
           className="w-full h-full object-contain p-1 rounded-2xl"
-          unoptimized
+          loading="lazy"
         />
       </div>
       <p className="text-xs font-medium text-center leading-tight">{name}</p>

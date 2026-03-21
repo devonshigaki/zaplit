@@ -2,15 +2,28 @@
  * Shared library exports for Zaplit Scripts TypeScript
  */
 
-export { Logger, type LogLevel, logger } from './logger';
-export { CommandExecutor, type ExecResult, type ExecOptions, executor } from './exec';
+export { 
+  logger, 
+  createCheckLogger,
+  Logger,
+  type LogLevel 
+} from './logger.js';
+
+export { 
+  execCommand, 
+  execCommandSilent, 
+  CommandExecutor,
+  type ExecResult, 
+  type ExecOptions 
+} from './exec.js';
+
 export { 
   GCloudClient, 
   createGCloudClient,
   type GCloudConfig,
   type VMInstance,
   type DiskInfo 
-} from './gcloud';
+} from './gcloud.js';
 
 // Circuit Breaker exports
 export {
@@ -28,7 +41,7 @@ export {
   type CircuitStateSnapshot,
   type SlidingWindowStats,
   type CircuitExecutionResult,
-} from './circuit-breaker';
+} from './circuit-breaker.js';
 
 // Redis client exports
 export {
@@ -40,4 +53,4 @@ export {
   type RedisClient,
   type RedisResult,
   type RedisClientOptions,
-} from './redis';
+} from './redis.js';

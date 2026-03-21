@@ -14,7 +14,7 @@
  */
 
 import { Pool, QueryResult } from 'pg';
-import { Logger } from '../lib/logger';
+import { Logger } from '../lib/logger.js';
 import {
   DlqEntry,
   DlqStatus,
@@ -28,7 +28,7 @@ import {
   HealthCheckResult,
   DlqQueryFilters,
   RetryHistoryEntry
-} from '../dlq/types';
+} from '../dlq/types.js';
 
 // ============================================================================
 // Logger Setup
@@ -760,4 +760,4 @@ export function createDlqManager(n8nWebhookUrl?: string): DlqManager {
 }
 
 // Export types
-export * from '../dlq/types';
+export * from '../dlq/types.js';

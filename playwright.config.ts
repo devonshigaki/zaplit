@@ -39,6 +39,15 @@ export default defineConfig({
     
     /* Video recording */
     video: 'on-first-retry',
+
+    /* Viewport size */
+    viewport: { width: 1280, height: 720 },
+
+    /* Action timeout */
+    actionTimeout: 15000,
+
+    /* Navigation timeout */
+    navigationTimeout: 30000,
   },
 
   /* Configure projects for major browsers */
@@ -60,14 +69,23 @@ export default defineConfig({
     // },
 
     /* Test against mobile viewports */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
+    {
+      name: 'Mobile Chrome',
+      use: { ...devices['Pixel 5'] },
+    },
+    {
+      name: 'Mobile Safari',
+      use: { ...devices['iPhone 12'] },
+    },
+    
+    /* Test tablet viewport */
+    {
+      name: 'Tablet',
+      use: { 
+        ...devices['iPad (gen 7)'],
+        viewport: { width: 768, height: 1024 },
+      },
+    },
   ],
 
   /* Run local dev server before starting the tests */
@@ -79,4 +97,19 @@ export default defineConfig({
         reuseExistingServer: !process.env.CI,
         timeout: 120000,
       },
+
+  /* Test timeout */
+  timeout: 60000,
+
+  /* Expect timeout */
+  expect: {
+    timeout: 10000,
+  },
+
+  /* Global setup and teardown */
+  // globalSetup: require.resolve('./e2e/setup/global-setup'),
+  // globalTeardown: require.resolve('./e2e/setup/global-teardown'),
+
+  /* Output directory for test artifacts */
+  outputDir: 'test-results/',
 });

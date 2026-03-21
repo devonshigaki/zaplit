@@ -11,8 +11,8 @@
 import { execSync } from 'child_process';
 import { existsSync, mkdirSync, writeFileSync, unlinkSync, statSync } from 'fs';
 import { dirname } from 'path';
-import { Logger } from '../lib/logger';
-import { CommandExecutor } from '../lib/exec';
+import { Logger } from '../lib/logger.js';
+import { CommandExecutor } from '../lib/exec.js';
 
 interface BackupConfig {
   backupDir: string;
@@ -201,11 +201,12 @@ class DatabaseBackup {
       this.cleanupOldBackups();
 
       return { success: true, backupFile: compressedFile };
-    } catch (error: any) {
+    } catch (error) {
       // Cleanup on failure
       if (existsSync(backupFile)) unlinkSync(backupFile);
       if (existsSync(compressedFile)) unlinkSync(compressedFile);
-      return { success: false, error: error.message };
+      const err = error as Error;
+      return { success: false, error: err.message };
     }
   }
 

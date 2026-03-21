@@ -17,3 +17,33 @@ export const logger = pino({
 export function createCheckLogger(checkName: string) {
   return logger.child({ check: checkName });
 }
+
+/**
+ * Logger class wrapper for compatibility
+ * @deprecated Use the logger instance directly or createCheckLogger()
+ */
+export class Logger {
+  private checkName: string;
+  
+  constructor(checkName: string) {
+    this.checkName = checkName;
+  }
+  
+  info(msg: string, meta?: Record<string, unknown>) {
+    logger.info({ check: this.checkName, ...meta }, msg);
+  }
+  
+  error(msg: string, error?: Error, meta?: Record<string, unknown>) {
+    logger.error({ check: this.checkName, error: error?.message, stack: error?.stack, ...meta }, msg);
+  }
+  
+  warn(msg: string, meta?: Record<string, unknown>) {
+    logger.warn({ check: this.checkName, ...meta }, msg);
+  }
+  
+  debug(msg: string, meta?: Record<string, unknown>) {
+    logger.debug({ check: this.checkName, ...meta }, msg);
+  }
+}
+
+export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';

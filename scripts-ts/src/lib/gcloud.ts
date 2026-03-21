@@ -2,8 +2,8 @@
  * Google Cloud Platform utility functions
  */
 
-import { CommandExecutor } from './exec';
-import { Logger } from './logger';
+import { execCommand, execCommandSilent } from './exec.js';
+
 
 export interface GCloudConfig {
   projectId: string;
@@ -25,62 +25,63 @@ export interface DiskInfo {
 }
 
 export class GCloudClient {
-  private executor: CommandExecutor;
-  private logger: Logger;
   private config: GCloudConfig;
 
-  constructor(config: GCloudConfig, logger?: Logger) {
+  constructor(config: GCloudConfig) {
     this.config = config;
-    this.logger = logger || new Logger();
-    this.executor = new CommandExecutor(this.logger);
   }
 
   /** Check if gcloud CLI is installed */
-  checkInstalled(): boolean {
-    return this.executor.commandExists('gcloud');
+  async checkInstalled(): Promise<boolean> {
+    return execCommandSilent('gcloud', ['--version']);
   }
 
   /** Check if authenticated with gcloud */
-  checkAuthenticated(): boolean {
-    const result = this.executor.execSilent(
-      'gcloud auth list --filter=status:ACTIVE --format="value(account)"'
-    );
-    return result.includes('@');
+  async checkAuthenticated(): Promise<boolean> {
+    try {
+      const result = await execCommand('gcloud', ['auth', 'list', '--filter=status:ACTIVE', '--format=value(account)']);
+      return result.stdout.includes('@');
+    } catch {
+      return false;
+    }
   }
 
   /** Set the active project */
-  setProject(projectId?: string): void {
+  async setProject(projectId?: string): Promise<void> {
     const project = projectId || this.config.projectId;
-    this.executor.gcloud(`config set project ${project}`, { silent: true });
+    await execCommand('gcloud', ['config', 'set', 'project', project], { stdio: 'ignore' });
   }
 
   /** Get the current project ID */
-  getCurrentProject(): string {
-    const result = this.executor.execSilent('gcloud config get-value project 2>/dev/null');
-    return result || this.config.projectId;
+  async getCurrentProject(): Promise<string> {
+    try {
+      const result = await execCommand('gcloud', ['config', 'get-value', 'project']);
+      return result.stdout.trim() || this.config.projectId;
+    } catch {
+      return this.config.projectId;
+    }
   }
 
   /** Check if a VM instance exists */
-  instanceExists(instanceName: string, zone?: string): boolean {
+  async instanceExists(instanceName: string, zone?: string): Promise<boolean> {
     const z = zone || this.config.zone;
-    const result = this.executor.gcloud(
-      `compute instances describe ${instanceName} --zone=${z}`,
-      { silent: true, ignoreError: true }
-    );
-    return result.exitCode === 0;
+    try {
+      await execCommand('gcloud', ['compute', 'instances', 'describe', instanceName, `--zone=${z}`]);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** Get VM instance details */
-  getInstance(instanceName: string, zone?: string): VMInstance | null {
+  async getInstance(instanceName: string, zone?: string): Promise<VMInstance | null> {
     const z = zone || this.config.zone;
-    const result = this.executor.gcloud(
-      `compute instances describe ${instanceName} --zone=${z} --format=json`,
-      { silent: true, ignoreError: true }
-    );
-    
-    if (result.exitCode !== 0) return null;
-    
     try {
+      const result = await execCommand('gcloud', [
+        'compute', 'instances', 'describe', instanceName, 
+        `--zone=${z}`, 
+        '--format=json'
+      ]);
       const data = JSON.parse(result.stdout);
       return {
         name: data.name,
@@ -94,145 +95,205 @@ export class GCloudClient {
   }
 
   /** Get the boot disk name for an instance */
-  getBootDiskName(instanceName: string, zone?: string): string | null {
+  async getBootDiskName(instanceName: string, zone?: string): Promise<string | null> {
     const z = zone || this.config.zone;
-    const result = this.executor.execSilent(
-      `gcloud compute instances describe ${instanceName} --zone=${z} --format="value(disks[0].deviceName)"`
-    );
-    return result || null;
+    try {
+      const result = await execCommand('gcloud', [
+        'compute', 'instances', 'describe', instanceName, 
+        `--zone=${z}`, 
+        '--format=value(disks[0].deviceName)'
+      ]);
+      return result.stdout.trim() || null;
+    } catch {
+      return null;
+    }
   }
 
   /** SSH into an instance and run a command */
-  ssh(instanceName: string, command: string, zone?: string): { stdout: string; stderr: string; success: boolean } {
+  async ssh(instanceName: string, command: string, zone?: string): Promise<{ stdout: string; stderr: string; success: boolean }> {
     const z = zone || this.config.zone;
-    const result = this.executor.gcloudSSH(instanceName, z, command, { silent: true, ignoreError: true });
-    return {
-      stdout: result.stdout,
-      stderr: result.stderr,
-      success: result.exitCode === 0,
-    };
+    try {
+      const result = await execCommand('gcloud', [
+        'compute', 'ssh', instanceName, 
+        `--zone=${z}`,
+        `--command=${command}`
+      ]);
+      return {
+        stdout: result.stdout,
+        stderr: result.stderr,
+        success: true,
+      };
+    } catch (error) {
+      const execError = error as { stdout?: string; stderr?: string };
+      return {
+        stdout: execError.stdout || '',
+        stderr: execError.stderr || '',
+        success: false,
+      };
+    }
   }
 
   /** Copy a file to an instance via SCP */
-  scp(localPath: string, remotePath: string, instanceName: string, zone?: string): boolean {
+  async scp(localPath: string, remotePath: string, instanceName: string, zone?: string): Promise<boolean> {
     const z = zone || this.config.zone;
-    const result = this.executor.gcloud(
-      `compute scp ${localPath} ${instanceName}:${remotePath} --zone=${z}`,
-      { silent: true, ignoreError: true }
-    );
-    return result.exitCode === 0;
+    try {
+      await execCommand('gcloud', [
+        'compute', 'scp', localPath, `${instanceName}:${remotePath}`,
+        `--zone=${z}`
+      ]);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** Create a snapshot schedule */
-  createSnapshotSchedule(
+  async createSnapshotSchedule(
     scheduleName: string,
     options: {
       retentionDays: number;
       startTime: string;
       description?: string;
     }
-  ): boolean {
+  ): Promise<boolean> {
     const region = this.config.region || this.config.zone.replace(/-\w$/, '');
-    const result = this.executor.gcloud(
-      `compute resource-policies create snapshot-schedule ${scheduleName} ` +
-      `--description="${options.description || 'Snapshot schedule'}" ` +
-      `--max-retention-days=${options.retentionDays} ` +
-      `--on-source-disk-delete=keep-auto-snapshots ` +
-      `--daily-schedule ` +
-      `--start-time=${options.startTime} ` +
-      `--region=${region}`,
-      { silent: true, ignoreError: true }
-    );
-    return result.exitCode === 0;
+    try {
+      await execCommand('gcloud', [
+        'compute', 'resource-policies', 'create', 'snapshot-schedule', scheduleName,
+        `--description=${options.description || 'Snapshot schedule'}`,
+        `--max-retention-days=${options.retentionDays}`,
+        '--on-source-disk-delete=keep-auto-snapshots',
+        '--daily-schedule',
+        `--start-time=${options.startTime}`,
+        `--region=${region}`
+      ]);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** Check if a snapshot schedule exists */
-  snapshotScheduleExists(scheduleName: string): boolean {
+  async snapshotScheduleExists(scheduleName: string): Promise<boolean> {
     const region = this.config.region || this.config.zone.replace(/-\w$/, '');
-    const result = this.executor.gcloud(
-      `compute resource-policies describe ${scheduleName} --region=${region}`,
-      { silent: true, ignoreError: true }
-    );
-    return result.exitCode === 0;
+    try {
+      await execCommand('gcloud', [
+        'compute', 'resource-policies', 'describe', scheduleName,
+        `--region=${region}`
+      ]);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** Delete a snapshot schedule */
-  deleteSnapshotSchedule(scheduleName: string): boolean {
+  async deleteSnapshotSchedule(scheduleName: string): Promise<boolean> {
     const region = this.config.region || this.config.zone.replace(/-\w$/, '');
-    const result = this.executor.gcloud(
-      `compute resource-policies delete ${scheduleName} --region=${region} --quiet`,
-      { silent: true, ignoreError: true }
-    );
-    return result.exitCode === 0;
+    try {
+      await execCommand('gcloud', [
+        'compute', 'resource-policies', 'delete', scheduleName,
+        `--region=${region}`,
+        '--quiet'
+      ]);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** Attach a snapshot schedule to a disk */
-  attachSnapshotSchedule(diskName: string, scheduleName: string, zone?: string): boolean {
+  async attachSnapshotSchedule(diskName: string, scheduleName: string, zone?: string): Promise<boolean> {
     const z = zone || this.config.zone;
-    const result = this.executor.gcloud(
-      `compute disks add-resource-policies ${diskName} ` +
-      `--resource-policies=${scheduleName} ` +
-      `--zone=${z}`,
-      { silent: true, ignoreError: true }
-    );
-    return result.exitCode === 0;
+    try {
+      await execCommand('gcloud', [
+        'compute', 'disks', 'add-resource-policies', diskName,
+        `--resource-policies=${scheduleName}`,
+        `--zone=${z}`
+      ]);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** Check if a disk has a snapshot schedule attached */
-  diskHasSchedule(diskName: string, scheduleName: string, zone?: string): boolean {
+  async diskHasSchedule(diskName: string, scheduleName: string, zone?: string): Promise<boolean> {
     const z = zone || this.config.zone;
-    const result = this.executor.execSilent(
-      `gcloud compute disks describe ${diskName} --zone=${z} --format="value(resourcePolicies)"`
-    );
-    return result.includes(scheduleName);
+    try {
+      const result = await execCommand('gcloud', [
+        'compute', 'disks', 'describe', diskName,
+        `--zone=${z}`,
+        '--format=value(resourcePolicies)'
+      ]);
+      return result.stdout.includes(scheduleName);
+    } catch {
+      return false;
+    }
   }
 
   /** Create or update a secret in Secret Manager */
-  createSecret(secretName: string, value: string, labels?: Record<string, string>): boolean {
+  async createSecret(secretName: string, value: string, labels?: Record<string, string>): Promise<boolean> {
     // Check if secret exists
-    const exists = this.executor.gcloud(
-      `secrets describe ${secretName}`,
-      { silent: true, ignoreError: true }
-    ).exitCode === 0;
+    let exists = false;
+    try {
+      await execCommand('gcloud', ['secrets', 'describe', secretName]);
+      exists = true;
+    } catch {
+      exists = false;
+    }
 
     if (exists) {
       // Add new version
-      const result = this.executor.exec(
-        `echo -n "${value}" | gcloud secrets versions add ${secretName} --data-file=-`,
-        { silent: true, ignoreError: true }
-      );
-      return result.exitCode === 0;
+      try {
+        await execCommand('gcloud', ['secrets', 'versions', 'add', secretName, `--data-file=-`], {
+          input: value,
+        });
+        return true;
+      } catch {
+        return false;
+      }
     } else {
       // Create new secret
-      const labelsStr = labels 
-        ? Object.entries(labels).map(([k, v]) => `${k}=${v}`).join(',')
-        : '';
-      const result = this.executor.exec(
-        `echo -n "${value}" | gcloud secrets create ${secretName} ` +
-        `--data-file=- ` +
-        `${labelsStr ? `--labels=${labelsStr} ` : ''}` +
-        `--replication-policy=automatic`,
-        { silent: true, ignoreError: true }
-      );
-      return result.exitCode === 0;
+      const args = [
+        'secrets', 'create', secretName,
+        '--data-file=-',
+        '--replication-policy=automatic'
+      ];
+      if (labels) {
+        const labelsStr = Object.entries(labels).map(([k, v]) => `${k}=${v}`).join(',');
+        args.push(`--labels=${labelsStr}`);
+      }
+      try {
+        await execCommand('gcloud', args, { input: value });
+        return true;
+      } catch {
+        return false;
+      }
     }
   }
 
   /** Get the latest version of a secret */
-  getSecret(secretName: string): string | null {
-    const result = this.executor.execSilent(
-      `gcloud secrets versions access latest --secret=${secretName}`
-    );
-    return result || null;
+  async getSecret(secretName: string): Promise<string | null> {
+    try {
+      const result = await execCommand('gcloud', [
+        'secrets', 'versions', 'access', 'latest',
+        `--secret=${secretName}`
+      ]);
+      return result.stdout || null;
+    } catch {
+      return null;
+    }
   }
 
   /** Check if a secret exists */
-  secretExists(secretName: string): boolean {
-    const result = this.executor.gcloud(
-      `secrets describe ${secretName}`,
-      { silent: true, ignoreError: true }
-    );
-    return result.exitCode === 0;
+  async secretExists(secretName: string): Promise<boolean> {
+    try {
+      await execCommand('gcloud', ['secrets', 'describe', secretName]);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

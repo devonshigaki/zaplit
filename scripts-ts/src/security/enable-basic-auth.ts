@@ -7,9 +7,9 @@
  * Usage: npx ts-node enable-basic-auth.ts [INSTANCE_NAME] [ZONE] [USERNAME] [PROJECT_ID]
  */
 
-import { Logger } from '../lib/logger';
-import { GCloudClient, createGCloudClient } from '../lib/gcloud';
-import { CommandExecutor } from '../lib/exec';
+import { Logger } from '../lib/logger.js';
+import { GCloudClient, createGCloudClient } from '../lib/gcloud.js';
+import { CommandExecutor } from '../lib/exec.js';
 
 interface BasicAuthConfig {
   instanceName: string;

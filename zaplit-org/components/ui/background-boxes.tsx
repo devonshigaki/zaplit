@@ -4,8 +4,10 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export const BoxesCore = ({ className, ...rest }: { className?: string }) => {
-  const rows = new Array(150).fill(1);
-  const cols = new Array(100).fill(1);
+  // Reduced grid size for performance: 30x20 = 600 elements vs 150x100 = 15,000
+  // This significantly improves rendering performance while maintaining visual effect
+  const rows = new Array(30).fill(1);
+  const cols = new Array(20).fill(1);
   
   // Using subtle warm grayscale colors for light theme
   const colors = [

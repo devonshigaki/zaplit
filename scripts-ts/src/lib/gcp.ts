@@ -7,9 +7,11 @@ import { GcpError, SshError } from './errors.js';
 import type { GcpConfig } from '../types/verification.js';
 
 export class GcpClient {
-  private log = logger.child({ component: 'GcpClient' });
+  private log;
 
-  constructor(private config: GcpConfig) {}
+  constructor(private config: GcpConfig) {
+    this.log = logger.child({ component: 'GcpClient' });
+  }
 
   /**
    * Check if gcloud CLI is installed

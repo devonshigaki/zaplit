@@ -10,8 +10,8 @@
  * Usage: npx ts-node verify-encryption-key.ts [INSTANCE_NAME] [ZONE] [PROJECT_ID]
  */
 
-import { Logger } from '../lib/logger';
-import { GCloudClient, createGCloudClient } from '../lib/gcloud';
+import { Logger } from '../lib/logger.js';
+import { GCloudClient, createGCloudClient } from '../lib/gcloud.js';
 
 interface VerificationConfig {
   instanceName: string;

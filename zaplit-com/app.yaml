@@ -17,6 +17,11 @@ automatic_scaling:
 
 env_variables:
   NODE_ENV: production
-  N8N_WEBHOOK_CONSULTATION: "https://dam-boolean-virginia-advertiser.trycloudflare.com/webhook/consultation"
-  N8N_WEBHOOK_CONTACT: "https://dam-boolean-virginia-advertiser.trycloudflare.com/webhook/contact"
-  N8N_WEBHOOK_SECRET: "local-dev-secret-key"
+  # NOTE: All secrets loaded from GCP Secret Manager in cloudbuild.yaml
+  # N8N_WEBHOOK_CONSULTATION: Loaded from Secret Manager
+  # N8N_WEBHOOK_CONTACT: Loaded from Secret Manager
+  # N8N_WEBHOOK_SECRET: Loaded from Secret Manager
+  # TWENTY_API_KEY: Loaded from Secret Manager
+  # IP_HASH_SALT: Loaded from Secret Manager
+  # SENTRY_DSN: Loaded from Secret Manager
+  # LOGO_DEV_TOKEN: Loaded from Secret Manager

@@ -492,7 +492,7 @@ class ParallelPerfTest {
     this.logger.info(`  - report.md`);
   }
 
-  private generateMarkdownReport(report: any): string {
+  private generateMarkdownReport(report: ComparisonResult & { testId: string; timestamp: string }): string {
     return `# Parallel Workflow Performance Test Report
 
 **Test ID:** ${report.testId}  

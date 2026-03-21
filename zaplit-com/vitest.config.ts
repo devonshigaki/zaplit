@@ -7,7 +7,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./setupTests.ts'],
+    setupFiles: ['./vitest.setup.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -15,7 +15,7 @@ export default defineConfig({
         'node_modules/',
         '.next/',
         '*.config.*',
-        'setupTests.ts',
+        'vitest.setup.ts',
       ],
     },
   },

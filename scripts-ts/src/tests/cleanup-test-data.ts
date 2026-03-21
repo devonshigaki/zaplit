@@ -125,9 +125,10 @@ class TestDataCleanup {
 
       this.logger.success(`Deleted ${result.deleted} people`);
       return result;
-    } catch (error: any) {
-      this.logger.error(`Error querying people: ${error.message}`);
-      result.errors.push(error.message);
+    } catch (error) {
+      const err = error as Error;
+      this.logger.error(`Error querying people: ${err.message}`);
+      result.errors.push(err.message);
       return result;
     }
   }
@@ -199,9 +200,10 @@ class TestDataCleanup {
 
       this.logger.success(`Deleted ${result.deleted} companies`);
       return result;
-    } catch (error: any) {
-      this.logger.error(`Error querying companies: ${error.message}`);
-      result.errors.push(error.message);
+    } catch (error) {
+      const err = error as Error;
+      this.logger.error(`Error querying companies: ${err.message}`);
+      result.errors.push(err.message);
       return result;
     }
   }

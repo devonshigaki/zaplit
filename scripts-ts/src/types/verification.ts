@@ -6,6 +6,7 @@ export type CheckStatus = 'pass' | 'fail' | 'warn';
 
 export interface CheckResult {
   name: string;
+  category?: string;
   status: CheckStatus;
   message: string;
   details?: Record<string, unknown>;

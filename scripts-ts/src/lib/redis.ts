@@ -7,7 +7,7 @@
  * @module redis
  */
 
-import { Logger } from './logger';
+import { Logger } from './logger.js';
 
 /**
  * Redis connection configuration
@@ -113,7 +113,7 @@ export class CircuitBreakerRedisClient {
   constructor(client: RedisClient, options: RedisClientOptions = {}) {
     this.client = client;
     this.keyPrefix = '';
-    this.logger = options.logger || new Logger();
+    this.logger = options.logger || new Logger('redis');
     this.debug = options.debug || false;
   }
 

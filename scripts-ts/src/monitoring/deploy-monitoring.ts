@@ -10,8 +10,8 @@
 import { existsSync, mkdirSync, writeFileSync, chmodSync, copyFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { execSync } from 'child_process';
-import { Logger } from '../lib/logger';
-import { CommandExecutor } from '../lib/exec';
+import { Logger } from '../lib/logger.js';
+import { CommandExecutor } from '../lib/exec.js';
 
 interface MonitoringConfig {
   n8nDir: string;
@@ -548,7 +548,7 @@ volumes:
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  private yamlStringify(obj: any, indent: number = 0): string {
+  private yamlStringify(obj: Record<string, unknown>, indent: number = 0): string {
     const spaces = '  '.repeat(indent);
     let result = '';
 

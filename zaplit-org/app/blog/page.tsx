@@ -72,14 +72,17 @@ export default function BlogPage() {
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               Get notified about new posts on AI agents, security, and automation.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+            <form className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto" aria-label="Newsletter subscription">
+              <label htmlFor="newsletter-email" className="sr-only">Email address</label>
               <input
+                id="newsletter-email"
                 type="email"
                 placeholder="your@email.com"
                 className="flex-1 px-4 py-2 rounded-lg bg-secondary border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-foreground"
+                aria-required="true"
               />
-              <Button>Subscribe</Button>
-            </div>
+              <Button type="submit">Subscribe</Button>
+            </form>
           </div>
         </div>
       </main>

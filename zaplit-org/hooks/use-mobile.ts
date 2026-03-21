@@ -1,8 +1,9 @@
 import * as React from 'react'
 
+/** Mobile breakpoint in pixels (768px = Tailwind md breakpoint) */
 const MOBILE_BREAKPOINT = 768
 
-export function useIsMobile() {
+export function useIsMobile(): boolean {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
 
   React.useEffect(() => {

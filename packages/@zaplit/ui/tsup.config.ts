@@ -1,0 +1,31 @@
+import { defineConfig } from 'tsup'
+
+export default defineConfig({
+  entry: ['src/index.ts', 'src/components/**/*.tsx'],
+  format: ['esm', 'cjs'],
+  dts: true,
+  splitting: true,
+  sourcemap: true,
+  clean: true,
+  minify: true,
+  target: 'es2022',
+  outDir: 'dist',
+  external: [
+    'react',
+    'react-dom',
+    'next',
+    'tailwindcss',
+    'lucide-react',
+    '@zaplit/utils',
+    '@zaplit/hooks',
+    '@radix-ui/react-dialog',
+    '@radix-ui/react-label',
+    '@radix-ui/react-popover',
+    '@radix-ui/react-separator',
+    '@radix-ui/react-slot',
+    '@radix-ui/react-tabs',
+    '@radix-ui/react-toast',
+    '@radix-ui/react-tooltip',
+    'class-variance-authority',
+  ],
+})

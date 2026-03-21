@@ -200,57 +200,61 @@ export function BookDemoSection() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-sm font-medium mb-2">Name</label>
+                    <label htmlFor="name" className="block text-sm font-medium mb-2">Name</label>
                     <input
+                      id="name"
                       type="text"
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                       className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:border-foreground focus:outline-none transition-colors text-sm font-mono"
                       placeholder="Your name"
                       disabled={isSubmitting}
                     />
                   </div>
                   <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-sm font-medium mb-2">Role</label>
+                    <label htmlFor="role" className="block text-sm font-medium mb-2">Role</label>
                     <input
+                      id="role"
                       type="text"
                       value={formData.role}
-                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                      onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
                       className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:border-foreground focus:outline-none transition-colors text-sm font-mono"
                       placeholder="CTO, Head of Ops…"
                       disabled={isSubmitting}
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium mb-2">Company</label>
+                    <label htmlFor="company" className="block text-sm font-medium mb-2">Company</label>
                     <input
+                      id="company"
                       type="text"
                       value={formData.company}
-                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                      onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
                       className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:border-foreground focus:outline-none transition-colors text-sm font-mono"
                       placeholder="Company name"
                       disabled={isSubmitting}
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium mb-2">Work email</label>
+                    <label htmlFor="email" className="block text-sm font-medium mb-2">Work email</label>
                     <input
+                      id="email"
                       type="email"
                       value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                       className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:border-foreground focus:outline-none transition-colors text-sm font-mono"
                       placeholder="you@company.com"
                       disabled={isSubmitting}
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium mb-2">Team size</label>
+                    <label id="teamsize-label" className="block text-sm font-medium mb-2">Team size</label>
                     <div className="grid grid-cols-4 gap-2">
                       {["1–10", "11–50", "51–200", "200+"].map((size) => (
                         <button
                           key={size}
                           type="button"
-                          onClick={() => setFormData({ ...formData, teamSize: size })}
+                          onClick={() => setFormData(prev => ({ ...prev, teamSize: size }))}
                           disabled={isSubmitting}
                           className={`px-3 py-2.5 rounded-lg border text-sm font-mono transition-colors ${
                             formData.teamSize === size
@@ -319,7 +323,7 @@ export function BookDemoSection() {
                       <button
                         key={level.id}
                         type="button"
-                        onClick={() => setFormData({ ...formData, securityLevel: level.id })}
+                        onClick={() => setFormData(prev => ({ ...prev, securityLevel: level.id }))}
                         disabled={isSubmitting}
                         className={`p-4 rounded-lg border text-left transition-colors ${
                           formData.securityLevel === level.id

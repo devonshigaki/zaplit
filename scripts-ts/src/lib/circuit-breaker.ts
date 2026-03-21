@@ -8,8 +8,8 @@
  * @see https://martinfowler.com/bliki/CircuitBreaker.html
  */
 
-import { CircuitBreakerRedisClient, RedisClient } from './redis';
-import { Logger } from './logger';
+import { CircuitBreakerRedisClient, RedisClient } from './redis.js';
+import { Logger } from './logger.js';
 
 /**
  * Circuit breaker states
@@ -163,7 +163,7 @@ export class CircuitBreaker {
   private redis: CircuitBreakerRedisClient;
   private logger: Logger;
   private keys: CircuitKeys;
-  private scriptSha: string | null = null;
+  // Note: Redis script caching can be implemented here for optimization
   private initialized = false;
 
   /**
@@ -191,7 +191,7 @@ export class CircuitBreaker {
     } as Required<CircuitBreakerConfig>;
 
     // Setup logger
-    this.logger = config.logger || new Logger();
+    this.logger = config.logger || new Logger('circuit-breaker');
 
     // Setup Redis client with key prefixing
     const prefix = config.keyPrefix || `circuit:${config.name}`;
@@ -221,8 +221,8 @@ export class CircuitBreaker {
       return;
     }
 
-    // Load Lua script for atomic operations
-    this.scriptSha = await this.redis.scriptLoad(ATOMIC_FAILURE_SCRIPT);
+    // Load Lua script for atomic operations (optional optimization)
+    await this.redis.scriptLoad(ATOMIC_FAILURE_SCRIPT);
     
     // Verify connection
     const healthy = await this.redis.healthCheck();
@@ -427,7 +427,7 @@ export class CircuitBreaker {
    * @param error - Optional error details
    * @returns Circuit state after recording
    */
-  async recordFailure(error?: Error): Promise<CircuitRecordResult> {
+  async recordFailure(_error?: Error): Promise<CircuitRecordResult> {
     await this.ensureInitialized();
 
     // Add to sliding window

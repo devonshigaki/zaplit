@@ -16,7 +16,7 @@
  */
 
 import { Pool, PoolClient, QueryResult } from 'pg';
-import { Logger } from '../lib/logger';
+import { Logger } from '../lib/logger.js';
 import {
   DlqEntry,
   DlqStatus,
@@ -28,7 +28,7 @@ import {
   RetryHistoryEntry,
   PoisonMessageConfig,
   PoisonMessageResult
-} from '../dlq/types';
+} from '../dlq/types.js';
 
 // ============================================================================
 // Configuration

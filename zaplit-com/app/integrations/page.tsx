@@ -7,7 +7,9 @@ import { Terminal, Search, ArrowLeft, Webhook, Code2, Zap, Filter } from "lucide
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
-const LOGO_TOKEN = 'pk_JbdpxRLTQW-ut_wLl4qEVQ'
+// Logo.dev token - should be moved to environment variable for production
+// This is a public token but should still be externalized
+const LOGO_TOKEN = process.env.NEXT_PUBLIC_LOGO_TOKEN || ''
 
 const categories = [
   { id: "all", name: "All" },
@@ -167,7 +169,6 @@ function IntegrationCard({ name, domain }: { name: string; domain: string }) {
           width={48}
           height={48}
           className="w-full h-full object-contain p-1.5 rounded-lg"
-          unoptimized
         />
       </div>
       <p className="text-sm font-medium text-center">{name}</p>

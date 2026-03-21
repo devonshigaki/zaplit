@@ -1,7 +1,53 @@
+/**
+ * Card Component
+ * 
+ * A flexible container component for grouping related content.
+ * Composed of multiple sub-components: CardHeader, CardTitle, CardDescription,
+ * CardContent, CardFooter, and CardAction.
+ * 
+ * @module components/ui/card
+ * @access public
+ * 
+ * @example
+ * // Basic card
+ * <Card>
+ *   <CardHeader>
+ *     <CardTitle>Card Title</CardTitle>
+ *     <CardDescription>Card description text</CardDescription>
+ *   </CardHeader>
+ *   <CardContent>
+ *     <p>Main content goes here</p>
+ *   </CardContent>
+ *   <CardFooter>
+ *     <Button>Action</Button>
+ *   </CardFooter>
+ * </Card>
+ * 
+ * @example
+ * // Card with action in header
+ * <Card>
+ *   <CardHeader>
+ *     <CardTitle>Settings</CardTitle>
+ *     <CardAction>
+ *       <Button variant="ghost" size="icon"><Settings /></Button>
+ *     </CardAction>
+ *   </CardHeader>
+ *   <CardContent>
+ *     <p>Configure your preferences</p>
+ *   </CardContent>
+ * </Card>
+ */
+
 import * as React from 'react'
 
 import { cn } from '@/lib/utils'
 
+/**
+ * Main card container component
+ * 
+ * @param className - Additional CSS classes
+ * @param props - Standard div element props
+ */
 function Card({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
@@ -15,6 +61,13 @@ function Card({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
+/**
+ * Card header section
+ * Contains the title, description, and optional action
+ * 
+ * @param className - Additional CSS classes
+ * @param props - Standard div element props
+ */
 function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
@@ -28,6 +81,12 @@ function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
+/**
+ * Card title heading
+ * 
+ * @param className - Additional CSS classes
+ * @param props - Standard div element props
+ */
 function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
@@ -38,6 +97,13 @@ function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
+/**
+ * Card description text
+ * Muted text that appears below the title
+ * 
+ * @param className - Additional CSS classes
+ * @param props - Standard div element props
+ */
 function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
@@ -48,6 +114,13 @@ function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
+/**
+ * Card action button container
+ * Positions an action button in the header's top-right corner
+ * 
+ * @param className - Additional CSS classes
+ * @param props - Standard div element props
+ */
 function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
@@ -61,6 +134,13 @@ function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
+/**
+ * Card content area
+ * Main content container with horizontal padding
+ * 
+ * @param className - Additional CSS classes
+ * @param props - Standard div element props
+ */
 function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
@@ -71,6 +151,13 @@ function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
+/**
+ * Card footer section
+ * Typically contains action buttons
+ * 
+ * @param className - Additional CSS classes
+ * @param props - Standard div element props
+ */
 function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div

@@ -1,0 +1,52 @@
+{
+  "name": "@zaplit/forms",
+  "version": "1.0.0",
+  "description": "Shared form schemas and validation for Zaplit applications",
+  "private": true,
+  "sideEffects": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./schemas": {
+      "types": "./dist/schemas.d.ts",
+      "import": "./dist/schemas.js",
+      "require": "./dist/schemas.cjs"
+    },
+    "./submission": {
+      "types": "./dist/submission.d.ts",
+      "import": "./dist/submission.js",
+      "require": "./dist/submission.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "zod": "^3.0.0"
+  },
+  "dependencies": {
+    "@zaplit/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "5.7.3",
+    "zod": "^3.24.1"
+  }
+}
