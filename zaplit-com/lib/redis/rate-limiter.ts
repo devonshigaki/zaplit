@@ -159,7 +159,7 @@ async function checkRedisLimit(ip: string): Promise<RateLimitResult> {
       resetTime,
     };
   } catch (error) {
-    console.error('[RATE_LIMIT] Redis error:', error);
+    logger.error({ component: 'rate-limiter', error }, 'Redis error');
     throw error;
   }
 }
@@ -190,7 +190,7 @@ export async function checkRateLimit(ip: string): Promise<RateLimitResult> {
       return await checkRedisLimit(ip);
     }
   } catch (error) {
-    console.warn('[RATE_LIMIT] Redis unavailable, falling back to memory:', error);
+    logger.warn({ component: 'rate-limiter', error }, 'Redis unavailable, falling back to memory');
   }
 
   // Fallback to in-memory
@@ -211,7 +211,7 @@ export async function resetRateLimit(ip: string): Promise<void> {
     try {
       await redis.del(getRateLimitKey(ip));
     } catch (error) {
-      console.error('[RATE_LIMIT] Failed to reset Redis rate limit:', error);
+      logger.error({ component: 'rate-limiter', error }, 'Failed to reset Redis rate limit');
     }
   }
 
