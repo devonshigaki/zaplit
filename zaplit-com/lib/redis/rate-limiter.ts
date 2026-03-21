@@ -10,6 +10,7 @@
 
 import { getRedisClient } from './client';
 import { RATE_LIMITS } from '@/lib/constants';
+import { logger } from '@/lib/logger';
 
 /**
  * Rate limit check result

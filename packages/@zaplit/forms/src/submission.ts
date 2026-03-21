@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useCallback } from "react";
-
-export type FormType = "consultation" | "contact" | "newsletter";
+import type { FormType } from './schemas';
 
 export interface FormSubmissionData {
   [key: string]: unknown;

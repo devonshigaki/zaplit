@@ -30,8 +30,8 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: 'Zaplit.org — Agents for Good, Agents for Change',
-  description: 'AI agents designed for nonprofits. Automate fundraising, donor management, and program coordination. Secure, affordable, and built for impact.',
+  title: 'Zaplit — Hire a Digital Team, Not Software',
+  description: 'Boutique AI agent agency. Pre-built agent teams with white-glove deployment. No subscriptions, just results.',
   icons: {
     icon: '/favicon.ico',
     apple: '/icon.svg',
@@ -51,7 +51,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="">
+    <html lang="en" className="dark">
+      <head>
+        <link rel="preconnect" href="https://img.logo.dev" />
+        <link rel="dns-prefetch" href="https://img.logo.dev" />
+        <link rel="preconnect" href="https://n8n.zaplit.com" />
+        <link rel="dns-prefetch" href="https://n8n.zaplit.com" />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} ${playfair.variable} font-sans antialiased`}>
         <SkipLink />
         <ErrorBoundary>

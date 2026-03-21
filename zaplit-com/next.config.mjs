@@ -32,7 +32,6 @@ const nextConfig = {
   // Optimize bundle size for heavy dependencies
   experimental: {
     optimizePackageImports: [
-      'framer-motion',
       'lucide-react',
     ],
   },

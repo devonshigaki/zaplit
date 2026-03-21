@@ -32,7 +32,6 @@ const nextConfig = {
   // Optimize bundle size for heavy dependencies
   experimental: {
     optimizePackageImports: [
-      'framer-motion',
       'lucide-react',
     ],
   },
@@ -65,7 +64,7 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://img.logo.dev; font-src 'self'; connect-src 'self' https://n8n.zaplit.org https://*.sentry.io;",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://img.logo.dev; font-src 'self'; connect-src 'self' https://n8n.zaplit.com https://*.sentry.io;",
           },
           {
             key: 'Permissions-Policy',

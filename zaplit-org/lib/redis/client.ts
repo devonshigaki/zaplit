@@ -9,6 +9,7 @@
  */
 
 import Redis from 'ioredis';
+import { logger } from '@/lib/logger';
 
 // Global singleton for hot reload in development
 declare global {
@@ -82,23 +83,23 @@ function createRedisClient(config: RedisConfig): Redis {
 
   // Event handlers for monitoring
   client.on('connect', () => {
-    console.log('[REDIS] Connected successfully');
+    logger.info({ component: 'redis' }, 'Connected successfully');
   });
 
   client.on('ready', () => {
-    console.log('[REDIS] Client ready');
+    logger.info({ component: 'redis' }, 'Client ready');
   });
 
   client.on('error', (err) => {
-    console.error('[REDIS] Connection error:', err.message);
+    logger.error({ component: 'redis', error: err }, 'Connection error');
   });
 
   client.on('close', () => {
-    console.log('[REDIS] Connection closed');
+    logger.info({ component: 'redis' }, 'Connection closed');
   });
 
   client.on('reconnecting', () => {
-    console.log('[REDIS] Reconnecting...');
+    logger.info({ component: 'redis' }, 'Reconnecting...');
   });
 
   return client;

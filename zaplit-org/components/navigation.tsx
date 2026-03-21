@@ -19,16 +19,28 @@ export function Navigation() {
   const [isDark, setIsDark] = useState(true)
 
   useEffect(() => {
+    let ticking = false
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20)
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setIsScrolled(window.scrollY > 20)
+          ticking = false
+        })
+        ticking = true
+      }
     }
-    window.addEventListener("scroll", handleScroll)
+    window.addEventListener("scroll", handleScroll, { passive: true })
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
   const toggleTheme = () => {
-    setIsDark(!isDark)
-    document.documentElement.classList.toggle("dark")
+    const newDark = !isDark
+    setIsDark(newDark)
+    if (newDark) {
+      document.documentElement.classList.add("dark")
+    } else {
+      document.documentElement.classList.remove("dark")
+    }
   }
 
   return (
@@ -46,7 +58,7 @@ export function Navigation() {
             <div className="w-8 h-8 bg-foreground text-background rounded flex items-center justify-center">
               <Terminal className="w-4 h-4" />
             </div>
-            <span className="font-mono text-lg font-medium tracking-tight">zaplit.org</span>
+            <span className="font-mono text-lg font-medium tracking-tight">zaplit</span>
           </a>
 
           {/* Desktop Nav */}
@@ -72,7 +84,7 @@ export function Navigation() {
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
             <Button className="hidden md:flex" size="sm" asChild>
-              <a href="#book-demo">Get Started</a>
+              <a href="#book-demo">Book Demo</a>
             </Button>
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -99,7 +111,7 @@ export function Navigation() {
                 </a>
               ))}
               <Button size="sm" className="mt-2 w-full" asChild>
-                <a href="#book-demo" onClick={() => setIsMobileMenuOpen(false)}>Get Started</a>
+                <a href="#book-demo" onClick={() => setIsMobileMenuOpen(false)}>Book Demo</a>
               </Button>
             </div>
           </div>
