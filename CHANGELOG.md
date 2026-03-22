@@ -105,6 +105,50 @@ Forms (Next.js) → API → n8n → Twenty CRM + Brevo Email
 
 ---
 
+### 🆕 WordPress eSignature Setup - IN PROGRESS
+
+**New Requirement:** Set up WordPress on sign.freshcredit.com with eSignature functionality
+
+#### Research Completed
+
+**Hestia CP Access (Resolved):**
+- URL: https://hcp.zaplit.com:8083
+- Username: zaplitadmin
+- Password: ZaplitHestia2025!
+
+**External Drive Contents (Analyzed):**
+| Plugin | Status | Size |
+|--------|--------|------|
+| Gravity Forms Core | ✅ Available | 4.5 MB |
+| Gravity SMTP | ✅ Available | 1.9 MB |
+| Gravity Flow | ✅ Available | 2.6 MB |
+| WP Rocket | ✅ Available | 5.5 MB |
+| WP E-Signature | ❌ NOT FOUND | - |
+
+**Missing Component:**
+- WP E-Signature (ApproveMe) plugin not found on external drive
+- Must be purchased from https://aprv.me or provided separately
+
+**Setup Requirements Identified:**
+1. DNS: Update sign.freshcredit.com A record → 35.188.131.226
+2. Hestia: Add web domain in CP
+3. WordPress: Install via Quick Install
+4. Plugins: Upload available plugins from external drive
+5. eSignature: Await plugin provision
+
+**Security Analysis Complete:**
+- SSL/TLS hardening required
+- File permission lockdown needed
+- Database encryption recommended
+- Fail2Ban configuration required
+- Backup strategy: Daily + 7-year retention
+- Compliance: ESIGN/UETA + GDPR requirements documented
+
+**Documentation Created:**
+- docs/WORDPRESS_SETUP_INSTRUCTIONS.md - Complete setup guide
+
+---
+
 #### ✅ GCP Infrastructure Setup - 100% COMPLETE
 
 **Final Status:** All components verified and operational (March 21, 2026)
